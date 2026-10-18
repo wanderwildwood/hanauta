@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hum</string>
+
+    <!-- Screen-reader labels for the top-bar buttons -->
+    <string name="cd_back">Back</string>
+    <string name="cd_about">About</string>
+    <string name="cd_settings">Settings</string>
+    <string name="cd_play">Play</string>
+    <string name="cd_stop">Stop</string>
+    <string name="cd_share">Send</string>
+    <string name="cd_more">More</string>
+    <string name="cd_slower">Slower</string>
+    <string name="cd_faster">Faster</string>
+    <string name="cd_previous_bars">Earlier bars</string>
+    <string name="cd_next_bars">Later bars</string>
+
+    <!-- Shared words -->
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
+
+    <!-- ============================================================ -->
+    <!-- The list of takes -->
+
+    <string name="record">Record</string>
+    <!-- Under the Record button: "Click at 100, 4 beats to the bar" -->
+    <string name="home_click_on">Click at %1$d, %2$d beats to the bar</string>
+    <string name="home_click_off">No click: sing in your own time</string>
+    <string name="home_import">Read a recording</string>
+    <string name="home_import_note">A sound file already on the phone</string>
+    <string name="home_empty">No takes yet. Press Record, hum or sing the tune, and press Stop.</string>
+    <!-- A take's second line: "0:23 · 14 notes · G major" -->
+    <string name="take_line">%1$s · %2$s · %3$s</string>
+    <plurals name="notes_count">
+        <item quantity="one">%1$d note</item>
+        <item quantity="other">%1$d notes</item>
+    </plurals>
+
+    <!-- ============================================================ -->
+    <!-- Recording -->
+
+    <string name="record_title">New take</string>
+    <string name="record_tempo">Tempo</string>
+    <!-- "100 a minute" -->
+    <string name="record_bpm">%1$d a minute</string>
+    <string name="record_beats">Beats to the bar</string>
+    <string name="record_click">Click</string>
+    <string name="record_click_note">A bar to count you in. Headphones keep it out of the recording.</string>
+    <string name="record_start">Record</string>
+    <string name="record_stop">Stop</string>
+    <string name="record_count_in">Get ready</string>
+    <string name="record_listening">Listening</string>
+    <string name="record_quiet">Nothing heard yet</string>
+    <string name="record_hearing">Hearing you</string>
+    <string name="record_finding">Finding the notes</string>
+    <string name="record_permission">Hum needs the microphone to hear the tune.</string>
+    <string name="record_permission_settings">Allow it in the phone\'s settings</string>
+    <string name="failed_microphone">The microphone could not be opened. Another app may be using it.</string>
+    <string name="failed_unreadable">That file could not be read as sound.</string>
+    <string name="failed_no_notes">No notes were heard. Try again a little louder or closer.</string>
+    <string name="channel_recording">While recording</string>
+    <string name="notify_recording">Recording a take</string>
+    <string name="notify_finding">Finding the notes</string>
+
+    <!-- ============================================================ -->
+    <!-- A take -->
+
+    <!-- The take's settings line: "G major · 100 a minute · eighths" -->
+    <string name="take_settings">%1$s · %2$s · %3$s</string>
+    <!-- "Bars 3–4 of 9" -->
+    <string name="take_bars">Bars %1$d–%2$d of %3$d</string>
+    <string name="take_bar">Bar %1$d of %2$d</string>
+    <string name="take_none_selected">Press a note to change it.</string>
+    <!-- The chosen note: "E4, bar 2 beat 3" -->
+    <string name="take_selected">%1$s, bar %2$d beat %3$s</string>
+    <string name="edit_up">Up</string>
+    <string name="edit_down">Down</string>
+    <string name="edit_shorter">Shorter</string>
+    <string name="edit_longer">Longer</string>
+    <string name="edit_merge">Join next</string>
+    <string name="edit_split">Split</string>
+    <string name="edit_delete">Delete</string>
+    <string name="edit_delete_armed">Delete it</string>
+    <string name="edit_undo">Undo</string>
+    <string name="take_empty">Every note has been deleted. Undo brings them back.</string>
+
+    <!-- Send -->
+    <string name="send_title">Send</string>
+    <string name="send_midi">MIDI file</string>
+    <string name="send_midi_note">For a DAW: LMMS, Ardour, Reaper, any of them</string>
+    <string name="send_musicxml">Sheet music</string>
+    <string name="send_musicxml_note">MusicXML, for MuseScore and other notation programs</string>
+    <string name="send_recording">The recording</string>
+    <string name="send_recording_note">WAV, as it was sung</string>
+    <string name="send_failed">It could not be sent.</string>
+
+    <!-- The take's own settings -->
+    <string name="take_more_title">This take</string>
+    <string name="take_rename">Name</string>
+    <string name="take_key">Key</string>
+    <string name="take_grid">Notes snap to</string>
+    <string name="take_tempo">Tempo</string>
+    <!-- A tempo worked out from the notes rather than set by the click: "92 a minute, guessed" -->
+    <string name="take_tempo_guessed">%1$s, guessed</string>
+    <string name="take_replace">Place the notes again</string>
+    <string name="take_replace_armed">Press again to place them again</string>
+    <string name="take_delete">Delete this take</string>
+    <string name="take_delete_armed">Press again to delete it</string>
+
+    <!-- Keys -->
+    <string name="key_chromatic">Any note</string>
+    <!-- "G major", "E minor" -->
+    <string name="key_major">%1$s major</string>
+    <string name="key_minor">%1$s minor</string>
+    <string name="key_major_heading">Major</string>
+    <string name="key_minor_heading">Minor</string>
+
+    <!-- Grids -->
+    <string name="grid_quarter">Quarter notes</string>
+    <string name="grid_eighth">Eighth notes</string>
+    <string name="grid_sixteenth">Sixteenth notes</string>
+    <string name="grid_triplet">Eighth-note triplets</string>
+    <!-- Short, for the take's settings line -->
+    <string name="grid_quarter_short">quarters</string>
+    <string name="grid_eighth_short">eighths</string>
+    <string name="grid_sixteenth_short">sixteenths</string>
+    <string name="grid_triplet_short">triplets</string>
+
+    <!-- ============================================================ -->
+    <!-- Settings -->
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_grid">Notes snap to</string>
+    <string name="settings_play_voice">Play the recording under the notes</string>
+    <string name="list_jump_setting">Letters and page dots</string>
+    <string name="list_jump_shown">Shown</string>
+    <string name="list_jump_hidden">Hidden</string>
+
+    <!-- About -->
+    <string name="about_title">Hum %1$s</string>
+    <string name="about_what">Hum or sing a tune and it is written down as notes, to fix and send to a DAW as MIDI or as sheet music. Nothing leaves the phone unless you send it: the app has no internet permission.</string>
+    <string name="about_licence">GNU General Public License v3</string>
+    <string name="about_pitch">Pitch detection from Tuner by Michael Moessner, GPL v3</string>
+    <string name="about_icons">Icons from Material Symbols, Apache 2.0</string>
+    <string name="about_feed_the_llamas">feed the llamas</string>
+    <string name="about_no_browser">There is no browser on this phone to open that with.</string>
+    <string name="about_close">Close</string>
+</resources>
