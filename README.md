@@ -7,6 +7,11 @@ device.
 
 *Hanauta* is 鼻歌 — humming a tune to yourself.
 
+| | |
+|---|---|
+| ![Takes, newest first](screenshots/1-takes.png) | ![A new take, with the click on](screenshots/2-record.png) |
+| ![A take on the piano roll, one note chosen](screenshots/3-piano-roll.png) | ![Send: MIDI, sheet music or the recording](screenshots/4-send.png) |
+
 Written in Kotlin and Jetpack Compose, using Mudita's own [MMD](https://github.com/mudita/MMD)
 design system so it looks like the apps the phone already ships with. The pitch detection is
 from Michael Moessner's [Tuner](https://codeberg.org/thetwom/Tuner).
@@ -86,13 +91,25 @@ back the way a sequencer and a notation program read them.
 `tools/make-test-hum.py` writes that same tune as a WAV file, for trying the app without
 singing.
 
+## Getting it, and keeping it
+
+Download <https://github.com/wanderwildwood/hanauta/releases/latest/download/hanauta.apk>
+and sideload it. That address always points at the newest release, and every release
+publishes a `.sha256` beside the APK if you would rather check than trust.
+
+For updates without doing this by hand, add this repository to
+[Obtainium](https://github.com/ImranR98/Obtainium):
+
+    https://github.com/wanderwildwood/hanauta
+
 ## Licence
 
 GPL-3.0-only. See [LICENSE](LICENSE).
 
 Copyright (C) 2026 wander wildwood, and (C) 2020–2024 Michael Moessner for the pitch detection
 in `app/src/main/kotlin/com/wanderwildwood/hanauta/pitch/`, from
-[Tuner](https://codeberg.org/thetwom/Tuner) (GPL-3.0-or-later), by way of this shop's own Tuner (onsa).
+[Tuner](https://codeberg.org/thetwom/Tuner) (GPL-3.0-or-later), by way of
+[Tuning Fork](https://github.com/wanderwildwood/onsa) (onsa), its Kompakt version.
 
 This program is free software: you can redistribute it and/or modify it under the terms of the
 GNU General Public License as published by the Free Software Foundation, version 3.
