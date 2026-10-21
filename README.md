@@ -60,7 +60,9 @@ that is switched on in Settings.
 **Send** (the share button) gives three files, named after the take:
 
 - **MIDI file**: one track of notes with the tempo, metre and key. In LMMS it is
-  *Project → Import*; Ardour, Reaper, Bitwig and every other DAW open it the same way.
+  *Project → Import*; Ardour, Reaper, Bitwig and every other DAW open it the same way. LMMS
+  keeps the file's tempo as automation, so its tempo box reads its own default (140) until you
+  press play, and then follows the file.
 - **Sheet music**: MusicXML, for MuseScore or any other notation program.
 - **The recording**, as WAV.
 
