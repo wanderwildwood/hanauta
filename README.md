@@ -111,7 +111,7 @@ GPL-3.0-only. See [LICENSE](LICENSE).
 Copyright (C) 2026 wander wildwood, and (C) 2020–2024 Michael Moessner for the pitch detection
 in `app/src/main/kotlin/com/wanderwildwood/hanauta/pitch/`, from
 [Tuner](https://codeberg.org/thetwom/Tuner) (GPL-3.0-or-later), by way of
-[Tuning Fork](https://github.com/wanderwildwood/onsa) (onsa), its Kompakt version.
+[Tuner](https://github.com/wanderwildwood/onsa) (onsa), its Kompakt version.
 
 This program is free software: you can redistribute it and/or modify it under the terms of the
 GNU General Public License as published by the Free Software Foundation, version 3.
