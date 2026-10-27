@@ -23,13 +23,23 @@ object Player {
     private val _playing = MutableStateFlow(false)
     val playing: StateFlow<Boolean> = _playing
 
+    private val _position = MutableStateFlow(-1)
+    /**
+     * Where the playback has got to, as the tick of the beat being played, or -1 when it is not
+     * playing. It moves a beat at a time, so a screen that follows it redraws once a beat and
+     * not once a frame.
+     */
+    val position: StateFlow<Int> = _position
+
     @Volatile private var on = false
     @Volatile private var track: AudioTrack? = null
 
     fun play(notes: List<Note>, tempo: Float, fromTick: Int, voice: File?, beatZero: Float) {
         stop()
         on = true
+        _position.value = (fromTick / PPQ) * PPQ
         _playing.value = true
+        val secondsPerTick = 60.0 / (tempo * PPQ)
         thread(name = "hum-play") {
             try {
                 val pcm = render(notes, tempo, fromTick, voice, beatZero)
@@ -47,17 +57,22 @@ object Player {
                     val w = t.write(pcm, off, minOf(4096, pcm.size - off))
                     if (w <= 0) break
                     off += w
+                    follow(t, fromTick, secondsPerTick)
                 }
                 // Let what is buffered finish before letting go; no longer than it could take,
                 // in case the head never moves (no speaker to move it).
                 if (on) {
                     t.stop()
                     val deadline = System.currentTimeMillis() + 1500
-                    while (on && t.playbackHeadPosition < pcm.size && System.currentTimeMillis() < deadline) Thread.sleep(20)
+                    while (on && t.playbackHeadPosition < pcm.size && System.currentTimeMillis() < deadline) {
+                        follow(t, fromTick, secondsPerTick)
+                        Thread.sleep(20)
+                    }
                 }
             } finally {
                 track?.let { runCatching { it.pause(); it.flush(); it.release() } }
                 track = null
+                _position.value = -1
                 _playing.value = false
             }
         }
@@ -65,9 +80,18 @@ object Player {
 
     fun stop() {
         on = false
+        _position.value = -1
         _playing.value = false
         // A write waiting on a full buffer returns once the track is paused.
         runCatching { track?.pause(); track?.flush() }
+    }
+
+    /** Moves [position] to the beat the speaker has reached. */
+    private fun follow(t: AudioTrack, fromTick: Int, secondsPerTick: Double) {
+        val tick = fromTick + (t.playbackHeadPosition.toDouble() / RATE / secondsPerTick).toInt()
+        // Only ever forward: a track that has been told to stop may count its head from zero again.
+        val beat = (tick / PPQ) * PPQ
+        if (on && beat > _position.value) _position.value = beat
     }
 
     private fun render(notes: List<Note>, tempo: Float, fromTick: Int, voice: File?, beatZero: Float): ShortArray {

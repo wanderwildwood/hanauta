@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.buttons.ButtonMMD
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
@@ -65,75 +66,78 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
         },
     ) { padding ->
         val state = rememberLazyListState()
-        ListJumpBox(state, ListJump.Pages, Modifier.padding(padding)) {
-            PagedColumn(Modifier.fillMaxSize(), state = state) {
-                item(key = "record") {
-                    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
-                        ButtonMMD(
-                            onClick = onRecord,
-                            modifier = Modifier.fillMaxWidth().height(64.dp).testTag("record"),
-                        ) {
-                            Icon(Icons.Mic, contentDescription = null, modifier = Modifier.size(24.dp))
-                            Spacer(Modifier.width(8.dp))
-                            TextMMD(text = stringResource(R.string.record), style = MaterialTheme.typography.bodyLarge)
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        TextMMD(
-                            text = if (prefs.click) stringResource(R.string.home_click_on, prefs.tempo, prefs.beatsPerBar)
-                            else stringResource(R.string.home_click_off),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
+        PagedColumn(Modifier.padding(padding).fillMaxSize(), state = state) {
+            item(key = "record") {
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
+                    ButtonMMD(
+                        onClick = onRecord,
+                        modifier = Modifier.fillMaxWidth().height(64.dp).testTag("record"),
+                    ) {
+                        Icon(Icons.Mic, contentDescription = null, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(8.dp))
+                        TextMMD(text = stringResource(R.string.record), style = MaterialTheme.typography.bodyLarge)
                     }
+                    Spacer(Modifier.height(6.dp))
+                    TextMMD(
+                        text = if (prefs.click) stringResource(R.string.home_click_on, prefs.tempo, prefs.beatsPerBar)
+                        else stringResource(R.string.home_click_off),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
                 }
-                item(key = "import") {
-                    Column(
+            }
+            item(key = "import") {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { import.launch(arrayOf("audio/*")) }
+                        .testTag("import")
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                ) {
+                    TextMMD(text = stringResource(R.string.home_import), style = MaterialTheme.typography.bodyMedium)
+                    TextMMD(text = stringResource(R.string.home_import_note), style = MaterialTheme.typography.labelSmall)
+                }
+                HorizontalDividerMMD(thickness = 1.dp)
+            }
+            if (all.isEmpty()) {
+                item(key = "empty") {
+                    TextMMD(
+                        text = stringResource(R.string.home_empty),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(20.dp),
+                    )
+                }
+            }
+            for (t in all) {
+                item(key = t.id) {
+                    Row(
                         Modifier
                             .fillMaxWidth()
-                            .clickable { import.launch(arrayOf("audio/*")) }
-                            .testTag("import")
+                            .clickable { onTake(t.id) }
+                            .testTag("take_${t.id}")
                             .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        TextMMD(text = stringResource(R.string.home_import), style = MaterialTheme.typography.bodyMedium)
-                        TextMMD(text = stringResource(R.string.home_import_note), style = MaterialTheme.typography.labelSmall)
+                        Column(Modifier.weight(1f)) {
+                            TextMMD(text = t.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            // A take with a name of its own keeps the day and time it was made under it.
+                            if (t.name != Words.recordedAt(t.id)) {
+                                TextMMD(text = Words.recordedAt(t.id), style = MaterialTheme.typography.labelSmall)
+                            }
+                            TextMMD(
+                                text = stringResource(
+                                    R.string.take_line,
+                                    Words.duration(t.seconds),
+                                    pluralStringResource(R.plurals.notes_count, t.notes.size, t.notes.size),
+                                    Words.key(context, t.key),
+                                ),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
                     }
                     HorizontalDividerMMD(thickness = 1.dp)
                 }
-                if (all.isEmpty()) {
-                    item(key = "empty") {
-                        TextMMD(
-                            text = stringResource(R.string.home_empty),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(20.dp),
-                        )
-                    }
-                }
-                for (t in all) {
-                    item(key = t.id) {
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .clickable { onTake(t.id) }
-                                .testTag("take_${t.id}")
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(Modifier.weight(1f)) {
-                                TextMMD(text = t.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                                TextMMD(
-                                    text = stringResource(
-                                        R.string.take_line,
-                                        Words.duration(t.seconds),
-                                        pluralStringResource(R.plurals.notes_count, t.notes.size, t.notes.size),
-                                        Words.key(context, t.key),
-                                    ),
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                        }
-                        HorizontalDividerMMD(thickness = 1.dp)
-                    }
-                }
             }
         }
+
     }
 }

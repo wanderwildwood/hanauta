@@ -71,6 +71,8 @@ fun PianoRoll(
     key: Key,
     range: PitchRange,
     voice: VoiceLine?,
+    /** The tick of the beat being played, or -1 when nothing is playing. */
+    playhead: Int = -1,
     onTap: (Int) -> Unit,
     onPage: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -79,7 +81,8 @@ fun PianoRoll(
     val paper = MaterialTheme.colorScheme.surface
     val measurer = rememberTextMeasurer()
     val gutter = with(LocalDensity.current) { 40.dp.toPx() }
-    val reach = with(LocalDensity.current) { 20.dp.toPx() }
+    // A note is found within this of a press: with its own width, a target of 48 dp or more.
+    val reach = with(LocalDensity.current) { 24.dp.toPx() }
     val tap by rememberUpdatedState(onTap)
     val page by rememberUpdatedState(onPage)
     val current by rememberUpdatedState(Triple(notes, from, ticks))
@@ -187,6 +190,12 @@ fun PianoRoll(
             } else {
                 drawRoundRect(ink, Offset(x0, y0), box, corner)
             }
+        }
+
+        // The playhead: a heavy line at the beat being played, stepping a beat at a time.
+        if (playhead in from..from + ticks) {
+            val xx = x(playhead)
+            drawLine(ink, Offset(xx, 0f), Offset(xx, size.height), 4.dp.toPx())
         }
     }
 }

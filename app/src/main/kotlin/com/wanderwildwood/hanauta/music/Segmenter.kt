@@ -31,12 +31,19 @@ object Segmenter {
     private const val SLIDE = 0.12f
     /** A dip to this share of the loudness either side is a new start on the same note. */
     private const val DIP = 0.55f
+    /**
+     * The loudness (RMS, 0 to 1) under which nothing is voice, whatever the rest of the take
+     * was: a quiet room and a microphone's own hiss sit well under it, a hum held a hand's
+     * breadth from the phone well over. Without it the quietest stretch of a silent take
+     * counted as its loudest, and the hiss was written down as a tune.
+     */
+    const val NOISE_FLOOR = 0.015f
 
     fun segment(track: Track): List<SungNote> {
         val n = track.size
         if (n == 0) return emptyList()
         val loudest = percentile(track.level, 0.95f)
-        val quiet = maxOf(0.005f, loudest * 0.08f)
+        val quiet = maxOf(NOISE_FLOOR, loudest * 0.08f)
         val voiced = BooleanArray(n) { !track.midi[it].isNaN() && track.level[it] >= quiet }
         val pitch = smooth(track.midi, voiced)
 

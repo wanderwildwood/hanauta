@@ -112,8 +112,13 @@ private fun ColumnScope.SetUp(prefs: Prefs, onRecord: () -> Unit) {
         click = it
         prefs.click = it
     }
-    if (click) {
-        Heading(stringResource(R.string.record_tempo))
+    Heading(stringResource(R.string.record_tempo))
+    if (!click) {
+        // The same height as the stepper, so the beats below do not move when the click goes.
+        Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.CenterStart) {
+            TextMMD(text = stringResource(R.string.record_tempo_found), style = MaterialTheme.typography.bodyMedium)
+        }
+    } else {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             StepButton(Icons.Minus, stringResource(R.string.cd_slower), "slower") {
                 tempo = (tempo - 5).coerceAtLeast(Prefs.MIN_TEMPO); prefs.tempo = tempo

@@ -46,23 +46,17 @@ fun SettingsScreen(onBack: () -> Unit) {
         },
     ) { padding ->
         val state = rememberLazyListState()
-        ListJumpBox(state, ListJump.Pages, Modifier.padding(padding)) {
-            PagedColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), state = state) {
-                item { Spacer(Modifier.height(8.dp)) }
-                item(key = "grid") {
-                    val g = remember(v) { prefs.grid }
-                    SettingRow(stringResource(R.string.settings_grid), Words.grid(context, g)) { grid = true }
-                }
-                item(key = "voice") {
-                    val on = remember(v) { prefs.playVoice }
-                    SwitchRow(stringResource(R.string.settings_play_voice), on) {
-                        prefs.playVoice = it
-                        v++
-                    }
-                }
-                item(key = "listjump") {
-                    val jumpShown by rememberListJumpShown()
-                    SwitchRow(stringResource(R.string.list_jump_setting), jumpShown) { ListJumpPrefs.setShown(context, it) }
+        PagedColumn(Modifier.padding(padding).fillMaxSize().padding(horizontal = 20.dp), state = state) {
+            item { Spacer(Modifier.height(8.dp)) }
+            item(key = "grid") {
+                val g = remember(v) { prefs.grid }
+                SettingRow(stringResource(R.string.settings_grid), Words.grid(context, g)) { grid = true }
+            }
+            item(key = "voice") {
+                val on = remember(v) { prefs.playVoice }
+                SwitchRow(stringResource(R.string.settings_play_voice), on) {
+                    prefs.playVoice = it
+                    v++
                 }
             }
         }

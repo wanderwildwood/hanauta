@@ -24,10 +24,9 @@ import com.wanderwildwood.hanauta.R
 import com.wanderwildwood.hanauta.data.Prefs
 import com.wanderwildwood.hanauta.data.Take
 import com.wanderwildwood.hanauta.data.Takes
+import com.wanderwildwood.hanauta.ui.Words
 import com.wanderwildwood.hanauta.music.Transcribe
 import java.io.File
-import java.text.DateFormat
-import java.util.Date
 import kotlin.concurrent.thread
 import kotlin.math.PI
 import kotlin.math.exp
@@ -183,7 +182,7 @@ class RecordService : Service() {
         val p = t.placing
         val take = Take(
             id = id,
-            name = name?.takeIf { it.isNotBlank() } ?: DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(id)),
+            name = name?.takeIf { it.isNotBlank() } ?: Words.recordedAt(id),
             seconds = samples.size.toFloat() / rate,
             tempo = p.tempo, beatsPerBar = p.beatsPerBar, key = p.key, grid = p.grid,
             beatZero = p.beatZero, tuning = p.tuning,

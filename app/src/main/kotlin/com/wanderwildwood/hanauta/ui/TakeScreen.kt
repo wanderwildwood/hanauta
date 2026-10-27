@@ -1,6 +1,8 @@
 package com.wanderwildwood.hanauta.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +17,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +40,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.buttons.OutlinedButtonMMD
 import com.mudita.mmd.components.text.TextMMD
@@ -72,7 +77,9 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
     var page by remember(id) { mutableIntStateOf(0) }
     var sending by remember { mutableStateOf(false) }
     var more by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
     val playing by Player.playing.collectAsState()
+    val position by Player.position.collectAsState()
     val delete = rememberArmed()
 
     DisposableEffect(id) { onDispose { Player.stop() } }
@@ -84,8 +91,12 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
         return
     }
 
-    /** A change: kept for Undo, saved at once. */
+    /** A change: kept for Undo, saved at once. One that changes nothing is not a step to undo. */
     fun change(next: Take, select: Int = selected) {
+        if (next == t) {
+            selected = select
+            return
+        }
         undo.push(t)
         canUndo = true
         take = next
@@ -102,13 +113,29 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
     if (page >= pages) page = pages - 1
     val from = page * pageTicks
     val onPage = t.notes.filter { it.end > from && it.start < from + pageTicks }.map { it.pitch }
+
+    // The playback moves a beat at a time; the page turns to keep it in sight.
+    LaunchedEffect(position) {
+        if (position >= 0) {
+            val next = (position / pageTicks).coerceIn(0, pages - 1)
+            if (next != page) { page = next; selected = -1 }
+        }
+    }
     val range = PitchRange.around(onPage, t.notes.map { it.pitch }.sorted().getOrNull(t.notes.size / 2) ?: 60)
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBarMMD(
-                title = { TextMMD(text = t.name, maxLines = 1) },
+                title = {
+                    // The name a take starts with is its date; pressing it renames the take.
+                    TextMMD(
+                        text = t.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).clickable { renaming = true }.testTag("title"),
+                    )
+                },
                 navigationIcon = { BarButton(Icons.Back, stringResource(R.string.cd_back), onBack) },
                 actions = {
                     if (playing) BarButton(Icons.Stop, stringResource(R.string.cd_stop)) { Player.stop() }
@@ -125,7 +152,7 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
             TextMMD(
                 text = stringResource(R.string.take_settings, Words.key(context, t.key), Words.tempo(context, t.tempo), Words.gridShort(context, t.grid)),
                 style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.fillMaxWidth().clickable { more = true }.padding(vertical = 6.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { more = true }.wrapContentHeight(Alignment.CenterVertically),
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 BarButton(Icons.ChevronLeft, stringResource(R.string.cd_previous_bars)) { if (page > 0) { page--; selected = -1 } }
@@ -153,6 +180,7 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
                         beatsPerBar = t.beatsPerBar,
                         key = t.key,
                         range = range,
+                        playhead = if (playing) position else -1,
                         voice = pitch?.let { VoiceLine(it, t.beatZero, t.tempo, t.tuning) },
                         onTap = { selected = it },
                         // A turned page lets go of the chosen note, so nothing changes a note out of sight.
@@ -191,8 +219,10 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
                 }
                 Tool(stringResource(R.string.edit_undo), canUndo, "undo") {
                     undo.pop()?.let { before ->
-                        take = before
-                        takes.save(before)
+                        // A rename is not a step: undoing goes back over the notes and settings only.
+                        val back = before.copy(name = t.name)
+                        take = back
+                        takes.save(back)
                         selected = selected.coerceAtMost(before.notes.size - 1)
                     }
                     canUndo = undo.canUndo
@@ -202,6 +232,17 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
         }
     }
 
+    if (renaming) RenameDialog(
+        t.name,
+        onSave = { name ->
+            // Not through change(): a name is not something Undo takes back.
+            val next = t.copy(name = name)
+            take = next
+            takes.save(next)
+            renaming = false
+        },
+        onDismiss = { renaming = false },
+    )
     if (sending) SendDialog(t, onDismiss = { sending = false })
     if (more) TakeDialog(
         t,
@@ -235,20 +276,56 @@ private fun RowScope.Tool(text: String, enabled: Boolean, tag: String, bold: Boo
 @Composable
 private fun SendDialog(take: Take, onDismiss: () -> Unit) {
     val context = LocalContext.current
+    // One file picker for each kind, since a picker is told the type of file up front.
+    val savers = Send.What.entries.associateWith { what ->
+        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(what.saveMime)) { uri ->
+            if (uri != null) Send.save(context, take, what, uri)
+            onDismiss()
+        }
+    }
+    val titles = mapOf(
+        Send.What.Midi to (R.string.send_midi to R.string.send_midi_note),
+        Send.What.Sheet to (R.string.send_musicxml to R.string.send_musicxml_note),
+        Send.What.Recording to (R.string.send_recording to R.string.send_recording_note),
+    )
+    val saveTitles = mapOf(
+        Send.What.Midi to R.string.save_as_midi,
+        Send.What.Sheet to R.string.save_as_sheet,
+        Send.What.Recording to R.string.save_as_recording,
+    )
     EInkDialog(onDismiss = onDismiss) {
         TextMMD(text = stringResource(R.string.send_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-        Spacer(Modifier.height(4.dp))
-        for ((what, title, note) in listOf(
-            Triple(Send.What.Midi, R.string.send_midi, R.string.send_midi_note),
-            Triple(Send.What.Sheet, R.string.send_musicxml, R.string.send_musicxml_note),
-            Triple(Send.What.Recording, R.string.send_recording, R.string.send_recording_note),
-        )) {
+        Heading(stringResource(R.string.send_to_app))
+        for (what in Send.What.entries) {
+            val (title, note) = titles.getValue(what)
             Box(Modifier.testTag("send_${what.name}")) {
                 SettingRow(stringResource(title), stringResource(note)) {
                     onDismiss()
                     Send.send(context, take, what)
                 }
             }
+        }
+        Heading(stringResource(R.string.send_to_file))
+        for (what in Send.What.entries) {
+            Box(Modifier.testTag("save_${what.name}")) {
+                SettingRow(stringResource(saveTitles.getValue(what)), null) {
+                    savers.getValue(what).launch(Send.fileName(take.name) + "." + what.extension)
+                }
+            }
+        }
+        DialogButton(stringResource(R.string.cancel), onClick = onDismiss)
+    }
+}
+
+/** A take's name, in a small dialog of its own. */
+@Composable
+private fun RenameDialog(name: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
+    var value by remember { mutableStateOf(name) }
+    EInkDialog(onDismiss = onDismiss) {
+        TextMMD(text = stringResource(R.string.take_rename_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+        Field(stringResource(R.string.take_rename), value, { value = it.replace('\n', ' ').take(80) }, modifier = Modifier.testTag("name"))
+        DialogButton(stringResource(R.string.save), filled = true) {
+            if (value.isNotBlank()) onSave(value.trim())
         }
         DialogButton(stringResource(R.string.cancel), onClick = onDismiss)
     }
@@ -258,7 +335,6 @@ private fun SendDialog(take: Take, onDismiss: () -> Unit) {
 @Composable
 private fun TakeDialog(take: Take, onChange: (Take) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    var name by remember { mutableStateOf(take.name) }
     var picking by remember { mutableStateOf<String?>(null) }
 
     /** The same take with new settings, its notes placed again from the voice. */
@@ -269,10 +345,6 @@ private fun TakeDialog(take: Take, onChange: (Take) -> Unit, onDelete: () -> Uni
 
     EInkDialog(onDismiss = onDismiss) {
         TextMMD(text = stringResource(R.string.take_more_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-        Field(stringResource(R.string.take_rename), name, { name = it.replace('\n', ' ').take(80) })
-        if (name.isNotBlank() && name.trim() != take.name) {
-            DialogButton(stringResource(R.string.save), filled = true) { onChange(take.copy(name = name.trim())) }
-        }
         SettingRow(stringResource(R.string.take_key), Words.key(context, take.key)) { picking = "key" }
         SettingRow(stringResource(R.string.take_grid), Words.grid(context, take.grid)) { picking = "grid" }
         SettingRow(
@@ -320,7 +392,7 @@ private fun KeyDialog(chosen: Key, onPick: (Key) -> Unit, onDismiss: () -> Unit)
                         Box(
                             Modifier
                                 .weight(1f)
-                                .height(40.dp)
+                                .height(48.dp)
                                 .padding(vertical = 3.dp)
                                 .let { if (on) it.background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(4.dp)) else it.border(BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface), RoundedCornerShape(4.dp)) }
                                 .clickable { onPick(key) }

@@ -51,4 +51,32 @@ class TranscribeTest {
         val t = Transcribe.run(samples, 44100, 4, Grid.Eighth, tempo = 100f, beatZero = 0.4f)
         assertEquals(Hum.expected().map { it.pitch - 12 }, t.notes.map { it.pitch })
     }
+
+    private fun scaled(by: Float) = Hum.render().let { x -> FloatArray(x.size) { x[it] * by } }
+
+    @Test
+    fun `a tune that never rises above the noise floor has no notes`() {
+        // The same hum, so quiet that its loudest stretch is hiss-level: still clearly pitched,
+        // which is what used to be taken for the loudest part of the take.
+        val rms = kotlin.math.sqrt(scaled(0.04f).map { it * it.toDouble() }.average()).toFloat()
+        assertTrue("rms $rms", rms < Segmenter.NOISE_FLOOR)
+        val t = Transcribe.run(scaled(0.04f), 44100, 4, Grid.Eighth)
+        assertTrue(describe(t.notes), t.notes.isEmpty())
+    }
+
+    @Test
+    fun `random hiss as loud as a quiet room has no notes`() {
+        val rnd = kotlin.random.Random(3)
+        val hiss = FloatArray(44100 * 3) { (rnd.nextFloat() - 0.5f) * 0.02f }
+        assertTrue(Transcribe.run(hiss, 44100, 4, Grid.Eighth).notes.isEmpty())
+    }
+
+    @Test
+    fun `a soft but real hum above the floor is still read`() {
+        val x = scaled(0.3f)
+        val rms = kotlin.math.sqrt(x.map { it * it.toDouble() }.average()).toFloat()
+        assertTrue("rms $rms", rms > Segmenter.NOISE_FLOOR * 2)
+        val t = Transcribe.run(x, 44100, 4, Grid.Eighth, tempo = 100f, beatZero = 0.4f)
+        assertEquals(Hum.expected().map { it.pitch }, t.notes.map { it.pitch })
+    }
 }

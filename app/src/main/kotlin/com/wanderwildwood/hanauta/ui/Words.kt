@@ -6,6 +6,8 @@ import com.wanderwildwood.hanauta.music.Grid
 import com.wanderwildwood.hanauta.music.Key
 import com.wanderwildwood.hanauta.music.NoteNames
 import com.wanderwildwood.hanauta.music.PPQ
+import java.text.DateFormat
+import java.util.Date
 import kotlin.math.roundToInt
 
 /** The app's words for keys, grids, lengths and places in the tune. */
@@ -36,6 +38,10 @@ object Words {
             Grid.Triplet -> R.string.grid_triplet_short
         },
     )
+
+    /** The day and time a take was made, which is the name it starts with: "Oct 24, 2026, 3:05 PM". */
+    fun recordedAt(id: Long): String =
+        DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(id))
 
     /** "1:05". */
     fun duration(seconds: Float): String {

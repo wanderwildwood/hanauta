@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -14,6 +15,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalCursorBlinkEnabled
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +59,7 @@ fun SettingRow(title: String, value: String?, onClick: (() -> Unit)?) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .let { if (onClick != null) it.clickable(onClick = onClick) else it }
             .padding(vertical = 14.dp),
     ) {
@@ -88,8 +92,8 @@ fun ChoiceRow(title: String, chosen: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
+            .heightIn(min = 48.dp)
+            .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButtonMMD(selected = chosen, onClick = null)
@@ -100,7 +104,7 @@ fun ChoiceRow(title: String, chosen: Boolean, onClick: () -> Unit) {
 
 /**
  * A press that asks once, in its own face: the first press arms it and changes what it says,
- * the second does it. It disarms itself after four seconds, so a stray press does not leave
+ * the second does it. It disarms itself after six seconds, so a stray press does not leave
  * a live trigger for whoever picks the phone up next.
  */
 @Composable
@@ -108,11 +112,14 @@ fun rememberArmed(): Armed {
     val a = remember { Armed() }
     LaunchedEffect(a.on) {
         if (!a.on) return@LaunchedEffect
-        delay(4000)
+        delay(ARMED_MILLIS)
         a.on = false
     }
     return a
 }
+
+/** Long enough to read the new wording and press again with a slow thumb. */
+private const val ARMED_MILLIS = 6000L
 
 class Armed {
     var on by mutableStateOf(false)
@@ -134,6 +141,7 @@ fun ArmedRow(label: String, armedLabel: String, onConfirmed: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .clickable { armed.press(onConfirmed) }
             .padding(vertical = 14.dp),
     ) {
@@ -194,6 +202,9 @@ fun Field(
 ) {
     Column(modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         TextMMD(text = label, style = MaterialTheme.typography.labelSmall)
+        // A blinking cursor repaints the field twice a second for as long as it has focus, which on
+        // an E Ink screen is a refresh nobody asked for; a steady one costs nothing at rest.
+        CompositionLocalProvider(LocalCursorBlinkEnabled provides false) {
         TextFieldMMD(
             value = value,
             onValueChange = onValue,
@@ -205,5 +216,6 @@ fun Field(
             ),
             modifier = Modifier.fillMaxWidth().textActions(),
         )
+        }
     }
 }
