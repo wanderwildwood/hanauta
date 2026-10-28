@@ -55,6 +55,12 @@ of the grid, **Join next** makes it one with the note after it, **Split** cuts i
 **Play** plays the notes from the page on screen, with the recording quieter underneath if
 that is switched on in Settings.
 
+Turned sideways, the roll takes the whole width and shows four bars at a time. Play, Stop,
+Save and Undo sit in a row at the foot with the time played and the page; with a note chosen,
+the row holds the tools that change it instead. The phone's own settings never turn the
+Kompakt's screen, so Hum watches the phone itself; **Settings → Turn sideways with the phone**
+keeps it upright.
+
 ## Sending
 
 **Send** (the share button) gives three files, named after the take:

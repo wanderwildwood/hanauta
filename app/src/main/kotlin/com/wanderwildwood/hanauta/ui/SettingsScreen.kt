@@ -59,6 +59,13 @@ fun SettingsScreen(onBack: () -> Unit) {
                     v++
                 }
             }
+            item(key = "turn") {
+                val on = remember(v) { prefs.turnWithPhone }
+                SwitchRow(stringResource(R.string.settings_turn), on) {
+                    prefs.turnWithPhone = it
+                    v++
+                }
+            }
         }
     }
     if (grid) {

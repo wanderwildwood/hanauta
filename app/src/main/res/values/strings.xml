@@ -143,6 +143,9 @@
     <string name="settings_title">Settings</string>
     <string name="settings_grid">Notes snap to</string>
     <string name="settings_play_voice">Play the recording under the notes</string>
+    <string name="settings_turn">Turn sideways with the phone</string>
+    <string name="take_time">%1$s of %2$s</string>
+    <string name="take_page">page %1$d of %2$d</string>
 
     <!-- About -->
     <string name="about_title">Hum %1$s</string>

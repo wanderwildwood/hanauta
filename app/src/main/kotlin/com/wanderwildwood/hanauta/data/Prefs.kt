@@ -25,6 +25,26 @@ class Prefs(context: Context) {
         get() = runCatching { Grid.valueOf(p.getString("grid", null) ?: "") }.getOrDefault(Grid.Eighth)
         set(v) = p.edit().putString("grid", v.name).apply()
 
+    /**
+     * Whether the screens turn sideways when the phone does. The Kompakt's own settings have no
+     * auto-rotate to follow, so the app watches the phone itself.
+     */
+    var turnWithPhone: Boolean
+        get() = p.getBoolean(TURN_WITH_PHONE, true)
+        set(v) = p.edit().putBoolean(TURN_WITH_PHONE, v).apply()
+
+    /** Calls [then] whenever the turning switch changes; keep the listener, the preferences hold it weakly. */
+    fun onTurnChanged(then: (Boolean) -> Unit): android.content.SharedPreferences.OnSharedPreferenceChangeListener {
+        val l = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == TURN_WITH_PHONE) then(turnWithPhone)
+        }
+        p.registerOnSharedPreferenceChangeListener(l)
+        return l
+    }
+
+    fun stopWatching(l: android.content.SharedPreferences.OnSharedPreferenceChangeListener) =
+        p.unregisterOnSharedPreferenceChangeListener(l)
+
     /** The recording played under the notes, quieter. */
     var playVoice: Boolean
         get() = p.getBoolean("play_voice", true)
@@ -33,5 +53,6 @@ class Prefs(context: Context) {
     companion object {
         const val MIN_TEMPO = 40
         const val MAX_TEMPO = 200
+        private const val TURN_WITH_PHONE = "turn_with_phone"
     }
 }

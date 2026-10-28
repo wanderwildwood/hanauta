@@ -134,19 +134,29 @@ fun PianoRoll(
         val thin = 1.dp.toPx()
         val dots = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 3.dp.toPx()))
 
-        // Rows: a dotted line under each C, and the names down the side.
+        // Rows: a dotted line under each C, and the names down the side. Each C and the chosen
+        // note's row are always named; the other notes of the key are named where a name fits
+        // without touching another, so a short roll (the phone turned sideways) still names
+        // every second or third row rather than only the Cs.
         val flats = NoteNames.flats(key)
+        val chosenPitch = notes.getOrNull(selected)?.pitch
+        val nameH = measurer.measure("C4", TextStyle(fontSize = 14.sp)).size.height.toFloat()
+        val named = ArrayList<Float>()
+        fun centre(pitch: Int) = (range.high - pitch + 0.5f) * rowH
+        fun fits(pitch: Int) = named.none { abs(it - centre(pitch)) < nameH }
+        fun name(pitch: Int) {
+            named += centre(pitch)
+            label(measurer, NoteNames.pitchClass(pitch, flats) + (pitch / 12 - 1), Offset(2.dp.toPx(), (range.high - pitch) * rowH), rowH, ink, pitch == chosenPitch)
+        }
         for (r in 0 until range.rows) {
             val pitch = range.high - r
-            val y = r * rowH
             if (pitch % 12 == 0) {
-                drawLine(ink, Offset(gutter, y + rowH), Offset(size.width, y + rowH), thin, pathEffect = dots)
-            }
-            val chosen = notes.getOrNull(selected)?.pitch == pitch
-            if (pitch % 12 == 0 || chosen || rowH >= 18.dp.toPx() && key.contains(pitch)) {
-                label(measurer, NoteNames.pitchClass(pitch, flats) + (pitch / 12 - 1), Offset(2.dp.toPx(), y), rowH, ink, chosen)
+                drawLine(ink, Offset(gutter, r * rowH + rowH), Offset(size.width, r * rowH + rowH), thin, pathEffect = dots)
             }
         }
+        chosenPitch?.takeIf { it in range.low..range.high }?.let(::name)
+        for (pitch in range.high downTo range.low) if (pitch % 12 == 0 && pitch != chosenPitch && fits(pitch)) name(pitch)
+        for (pitch in range.high downTo range.low) if (key.contains(pitch) && pitch % 12 != 0 && pitch != chosenPitch && fits(pitch)) name(pitch)
 
         // Columns: bar lines solid, beats dotted.
         val bar = PPQ * beatsPerBar
@@ -205,5 +215,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.label(
 ) {
     val style = TextStyle(color = ink, fontSize = 14.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal)
     val m = measurer.measure(text, style)
-    drawText(m, topLeft = Offset(at.x, at.y + (rowH - m.size.height) / 2))
+    // Kept inside the roll: a row shorter than the name would push the top or bottom one out.
+    val y = (at.y + (rowH - m.size.height) / 2).coerceIn(0f, maxOf(0f, size.height - m.size.height))
+    drawText(m, topLeft = Offset(at.x, y))
 }

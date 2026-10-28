@@ -17,11 +17,18 @@ import com.wanderwildwood.hanauta.ui.monochrome
 import java.io.File
 
 class MainActivity : ComponentActivity() {
+    private val turner = TurnWithPhone(this)
+    private val prefs by lazy { Prefs(this) }
+    // Held here: the preferences keep only a weak hold on it.
+    private var turnListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
 
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) debugImport()
+        turner.set(prefs.turnWithPhone)
+        // The switch in Settings takes effect at once.
+        turnListener = prefs.onTurnChanged { turner.set(it) }
         setContent {
             ThemeMMD(colorScheme = monochrome) {
                 // A debug build names its rows for the emulator tests; a release names none.
@@ -30,6 +37,21 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        turner.resume()
+    }
+
+    override fun onPause() {
+        turner.pause()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        turnListener?.let(prefs::stopWatching)
+        super.onDestroy()
     }
 
     /**

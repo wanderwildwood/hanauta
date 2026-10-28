@@ -1,6 +1,10 @@
 package com.wanderwildwood.hanauta.ui
 
 import androidx.activity.compose.BackHandler
+import android.app.Activity
+import android.content.res.Configuration
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -59,8 +63,9 @@ import com.wanderwildwood.hanauta.music.Quantise
 import com.wanderwildwood.hanauta.music.Undo
 import kotlin.math.roundToInt
 
-/** Bars to a page of the roll. */
+/** Bars to a page of the roll, upright; turned sideways the roll is wider and takes twice as many. */
 private const val BARS = 2
+private const val BARS_WIDE = 4
 
 /** One take: its notes a page of bars at a time, to fix and to send. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,18 +76,31 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
     val prefs = remember { Prefs(context) }
     var take by remember(id) { mutableStateOf(takes.get(id)) }
     val pitch = remember(id) { takes.pitchOf(id) }
-    val undo = remember(id) { Undo<Take>() }
-    var canUndo by remember { mutableStateOf(false) }
-    var selected by remember(id) { mutableIntStateOf(-1) }
-    var page by remember(id) { mutableIntStateOf(0) }
-    var sending by remember { mutableStateOf(false) }
-    var more by remember { mutableStateOf(false) }
-    var renaming by remember { mutableStateOf(false) }
+    // The steps back outlive a turn of the phone, which builds the screen again; leaving the take lets them go.
+    val undo = remember(id) { TurnProof.undo(id) }
+    var canUndo by remember { mutableStateOf(undo.canUndo) }
+    // Kept through a turn of the phone, which builds the screen again.
+    var selected by rememberSaveable(id) { mutableIntStateOf(-1) }
+    // Where the page starts, as a bar rather than a page, so a turn that changes the bars to a
+    // page keeps the same bars in sight.
+    var atBar by rememberSaveable(id) { mutableIntStateOf(0) }
+    var sending by rememberSaveable { mutableStateOf(false) }
+    var more by rememberSaveable { mutableStateOf(false) }
+    var renaming by rememberSaveable { mutableStateOf(false) }
+    val wide = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val playing by Player.playing.collectAsState()
     val position by Player.position.collectAsState()
     val delete = rememberArmed()
 
-    DisposableEffect(id) { onDispose { Player.stop() } }
+    // Leaving the take stops the playing; turning the phone, which builds the screen again, does not.
+    DisposableEffect(id) {
+        onDispose {
+            if ((context as? Activity)?.isChangingConfigurations != true) {
+                Player.stop()
+                TurnProof.forget(id)
+            }
+        }
+    }
     BackHandler { onBack() }
 
     val t = take ?: run {
@@ -107,23 +125,65 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
     fun edit(r: Edits.Result) = change(t.copy(notes = r.notes), r.selected)
 
     val barTicks = PPQ * t.beatsPerBar
-    val pageTicks = barTicks * BARS
+    val bars = if (wide) BARS_WIDE else BARS
+    val pageTicks = barTicks * bars
     val last = t.notes.maxOfOrNull { it.end } ?: 0
     val pages = maxOf(1, (last + pageTicks - 1) / pageTicks)
-    if (page >= pages) page = pages - 1
+    val page = (atBar / bars).coerceIn(0, pages - 1)
+    /** Turns to page [p], letting go of the chosen note, so nothing changes a note out of sight. */
+    fun turnTo(p: Int) {
+        val next = p.coerceIn(0, pages - 1)
+        if (next != page) { atBar = next * bars; selected = -1 }
+    }
     val from = page * pageTicks
     val onPage = t.notes.filter { it.end > from && it.start < from + pageTicks }.map { it.pitch }
 
     // The playback moves a beat at a time; the page turns to keep it in sight.
     LaunchedEffect(position) {
         if (position >= 0) {
-            val next = (position / pageTicks).coerceIn(0, pages - 1)
-            if (next != page) { page = next; selected = -1 }
+            turnTo(position / pageTicks)
         }
     }
     val range = PitchRange.around(onPage, t.notes.map { it.pitch }.sorted().getOrNull(t.notes.size / 2) ?: 60)
 
-    Scaffold(
+    fun play() = Player.play(t.notes, t.tempo, from, if (prefs.playVoice) takes.wav(t.id) else null, t.beatZero)
+    fun undoOne() {
+        undo.pop()?.let { before ->
+            // A rename is not a step: undoing goes back over the notes and settings only.
+            val back = before.copy(name = t.name)
+            take = back
+            takes.save(back)
+            selected = selected.coerceAtMost(before.notes.size - 1)
+        }
+        canUndo = undo.canUndo
+    }
+
+    if (wide) {
+        WideTake(
+            t = t,
+            selected = selected,
+            from = from,
+            pageTicks = pageTicks,
+            page = page,
+            pages = pages,
+            range = range,
+            playing = playing,
+            position = position,
+            pitch = pitch,
+            canUndo = canUndo,
+            deleteArmed = delete.on,
+            onBack = onBack,
+            onRename = { renaming = true },
+            onMore = { more = true },
+            onSelect = { selected = it },
+            onTurn = { turnTo(page + it) },
+            onPlay = ::play,
+            onSend = { sending = true },
+            onUndo = ::undoOne,
+            onEdit = ::edit,
+            onDelete = { delete.press { edit(Edits.delete(t.notes, selected)) } },
+        )
+    } else Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBarMMD(
@@ -139,9 +199,7 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
                 navigationIcon = { BarButton(Icons.Back, stringResource(R.string.cd_back), onBack) },
                 actions = {
                     if (playing) BarButton(Icons.Stop, stringResource(R.string.cd_stop)) { Player.stop() }
-                    else BarButton(Icons.Play, stringResource(R.string.cd_play)) {
-                        Player.play(t.notes, t.tempo, from, if (prefs.playVoice) takes.wav(t.id) else null, t.beatZero)
-                    }
+                    else BarButton(Icons.Play, stringResource(R.string.cd_play)) { play() }
                     BarButton(Icons.Share, stringResource(R.string.cd_share)) { sending = true }
                     BarButton(Icons.More, stringResource(R.string.cd_more)) { more = true }
                 },
@@ -155,9 +213,9 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { more = true }.wrapContentHeight(Alignment.CenterVertically),
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                BarButton(Icons.ChevronLeft, stringResource(R.string.cd_previous_bars)) { if (page > 0) { page--; selected = -1 } }
-                val firstBar = page * BARS + 1
-                val lastBar = minOf(firstBar + BARS - 1, maxOf(1, (last + barTicks - 1) / barTicks))
+                BarButton(Icons.ChevronLeft, stringResource(R.string.cd_previous_bars)) { turnTo(page - 1) }
+                val firstBar = page * bars + 1
+                val lastBar = minOf(firstBar + bars - 1, maxOf(1, (last + barTicks - 1) / barTicks))
                 val allBars = maxOf(1, (last + barTicks - 1) / barTicks)
                 TextMMD(
                     text = if (lastBar > firstBar) stringResource(R.string.take_bars, firstBar, lastBar, allBars)
@@ -166,7 +224,7 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f),
                 )
-                BarButton(Icons.ChevronRight, stringResource(R.string.cd_next_bars)) { if (page < pages - 1) { page++; selected = -1 } }
+                BarButton(Icons.ChevronRight, stringResource(R.string.cd_next_bars)) { turnTo(page + 1) }
             }
             Box(Modifier.weight(1f).fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.onSurface)) {
                 if (t.notes.isEmpty()) {
@@ -184,10 +242,7 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
                         voice = pitch?.let { VoiceLine(it, t.beatZero, t.tempo, t.tuning) },
                         onTap = { selected = it },
                         // A turned page lets go of the chosen note, so nothing changes a note out of sight.
-                        onPage = { d ->
-                            val next = (page + d).coerceIn(0, pages - 1)
-                            if (next != page) { page = next; selected = -1 }
-                        },
+                        onPage = { d -> turnTo(page + d) },
                         modifier = Modifier.fillMaxSize().testTag("roll"),
                     )
                 }
@@ -217,16 +272,7 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
                 Tool(stringResource(if (delete.on) R.string.edit_delete_armed else R.string.edit_delete), on, "delete", bold = delete.on) {
                     delete.press { edit(Edits.delete(t.notes, selected)) }
                 }
-                Tool(stringResource(R.string.edit_undo), canUndo, "undo") {
-                    undo.pop()?.let { before ->
-                        // A rename is not a step: undoing goes back over the notes and settings only.
-                        val back = before.copy(name = t.name)
-                        take = back
-                        takes.save(back)
-                        selected = selected.coerceAtMost(before.notes.size - 1)
-                    }
-                    canUndo = undo.canUndo
-                }
+                Tool(stringResource(R.string.edit_undo), canUndo, "undo") { undoOne() }
             }
             Spacer(Modifier.height(12.dp))
         }
@@ -254,6 +300,130 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
         },
         onDismiss = { more = false },
     )
+}
+
+/**
+ * A take with the phone turned sideways: the roll across the whole width, four bars a page, and
+ * one row at the foot. With no note chosen the row plays, stops, sends and undoes, and says where
+ * the playing is; with one chosen it holds the tools that change it, and a press beside the notes
+ * gives the row back.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WideTake(
+    t: Take,
+    selected: Int,
+    from: Int,
+    pageTicks: Int,
+    page: Int,
+    pages: Int,
+    range: PitchRange,
+    playing: Boolean,
+    position: Int,
+    pitch: com.wanderwildwood.hanauta.music.Track?,
+    canUndo: Boolean,
+    deleteArmed: Boolean,
+    onBack: () -> Unit,
+    onRename: () -> Unit,
+    onMore: () -> Unit,
+    onSelect: (Int) -> Unit,
+    onTurn: (Int) -> Unit,
+    onPlay: () -> Unit,
+    onSend: () -> Unit,
+    onUndo: () -> Unit,
+    onEdit: (Edits.Result) -> Unit,
+    onDelete: () -> Unit,
+) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
+        topBar = {
+            TopAppBarMMD(
+                title = {
+                    TextMMD(
+                        text = t.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.heightIn(min = 48.dp).wrapContentHeight(Alignment.CenterVertically).clickable(onClick = onRename).testTag("title"),
+                    )
+                },
+                navigationIcon = { BarButton(Icons.Back, stringResource(R.string.cd_back), onBack) },
+                actions = { BarButton(Icons.More, stringResource(R.string.cd_more), onMore) },
+            )
+        },
+    ) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize().padding(horizontal = 12.dp)) {
+            Box(Modifier.weight(1f).fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.onSurface)) {
+                if (t.notes.isEmpty()) {
+                    TextMMD(text = stringResource(R.string.take_empty), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp))
+                } else {
+                    PianoRoll(
+                        notes = t.notes,
+                        selected = selected,
+                        from = from,
+                        ticks = pageTicks,
+                        beatsPerBar = t.beatsPerBar,
+                        key = t.key,
+                        range = range,
+                        playhead = if (playing) position else -1,
+                        voice = pitch?.let { VoiceLine(it, t.beatZero, t.tempo, t.tuning) },
+                        onTap = onSelect,
+                        onPage = onTurn,
+                        modifier = Modifier.fillMaxSize().testTag("roll"),
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            val n = t.notes.getOrNull(selected)
+            val g = t.grid.ticks
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
+            ) {
+                if (n != null) {
+                    Tool(stringResource(R.string.edit_up), true, "up") { onEdit(Edits.move(t.notes, selected, 1)) }
+                    Tool(stringResource(R.string.edit_down), true, "down") { onEdit(Edits.move(t.notes, selected, -1)) }
+                    Tool(stringResource(R.string.edit_shorter), true, "shorter") { onEdit(Edits.lengthen(t.notes, selected, -1, g)) }
+                    Tool(stringResource(R.string.edit_longer), true, "longer") { onEdit(Edits.lengthen(t.notes, selected, 1, g)) }
+                    Tool(stringResource(R.string.edit_merge), selected < t.notes.size - 1, "merge") { onEdit(Edits.mergeNext(t.notes, selected)) }
+                    Tool(stringResource(R.string.edit_split), n.length >= 2 * g, "split") { onEdit(Edits.split(t.notes, selected, g)) }
+                    Tool(stringResource(if (deleteArmed) R.string.edit_delete_armed else R.string.edit_delete), true, "delete", bold = deleteArmed, onClick = onDelete)
+                    Tool(stringResource(R.string.edit_undo), canUndo, "undo", onClick = onUndo)
+                } else {
+                    Tool(stringResource(R.string.cd_play), !playing, "play", onClick = onPlay)
+                    Tool(stringResource(R.string.cd_stop), playing, "stop") { Player.stop() }
+                    Tool(stringResource(R.string.save), true, "send", onClick = onSend)
+                    Tool(stringResource(R.string.edit_undo), canUndo, "undo", onClick = onUndo)
+                    BarButton(Icons.ChevronLeft, stringResource(R.string.cd_previous_bars)) { onTurn(-1) }
+                    // Where the playing is (or the page starts), of the whole take, and the page.
+                    val at = if (playing && position >= 0) position else from
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        TextMMD(
+                            text = stringResource(R.string.take_time, clock(at, t.tempo), clock(t.notes.maxOfOrNull { it.end } ?: 0, t.tempo)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                        )
+                        TextMMD(text = stringResource(R.string.take_page, page + 1, pages), style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                    }
+                    BarButton(Icons.ChevronRight, stringResource(R.string.cd_next_bars)) { onTurn(1) }
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+        }
+    }
+}
+
+/** A place in the take, in ticks, as minutes and seconds at its tempo: "0:08". */
+private fun clock(ticks: Int, tempo: Float): String {
+    val seconds = (ticks * 60f / (tempo * PPQ)).roundToInt().coerceAtLeast(0)
+    return "%d:%02d".format(seconds / 60, seconds % 60)
+}
+
+/** What a take's screen keeps while the phone turns: its steps back, which cannot be saved in a bundle. */
+private object TurnProof {
+    private val undos = HashMap<Long, Undo<Take>>()
+    fun undo(id: Long): Undo<Take> = undos.getOrPut(id) { Undo() }
+    fun forget(id: Long) { undos.remove(id) }
 }
 
 @Composable
