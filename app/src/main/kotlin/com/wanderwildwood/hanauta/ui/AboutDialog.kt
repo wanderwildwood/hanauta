@@ -49,12 +49,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
             item { Paragraph(R.string.about_privacy) }
             item { Heading(stringResource(R.string.about_terms_heading)) }
             item { Paragraph(R.string.about_terms) }
-            item { Heading(stringResource(R.string.about_licences_heading)) }
-            item { LinkLine(R.string.about_licence, "https://www.gnu.org/licenses/gpl-3.0.html") }
-            item { Paragraph(R.string.about_pitch) }
-            item { Paragraph(R.string.about_icons) }
-            item { Paragraph(R.string.about_libraries) }
-            item { LinkLine(R.string.about_source, "https://github.com/wanderwildwood/hanauta") }
+            item { LicencesLink() }
             item { Llama() }
         }
         Spacer(Modifier.height(8.dp))

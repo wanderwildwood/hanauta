@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.mudita.mmd.components.buttons.ButtonMMD
+import com.mudita.mmd.components.buttons.OutlinedButtonMMD
 import com.mudita.mmd.components.divider.HorizontalDividerMMD
 import com.mudita.mmd.components.text.TextMMD
 import com.mudita.mmd.components.top_app_bar.TopAppBarMMD
@@ -56,12 +57,33 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
         Recording.import(context, uri, null, prefs.beatsPerBar)
     }
 
+    val removed by takes.removed.collectAsState()
+    // A delete is final once the user goes anywhere else.
+    fun go(act: () -> Unit) { takes.settle(); act() }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
+        bottomBar = {
+            removed?.let { gone ->
+                Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    TextMMD(
+                        text = stringResource(R.string.take_deleted, gone.name),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    OutlinedButtonMMD(
+                        onClick = takes::undo,
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp).height(48.dp).testTag("undo_delete"),
+                    ) {
+                        TextMMD(text = stringResource(R.string.take_deleted_undo), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        },
         topBar = {
             TopAppBarMMD(
                 title = { TextMMD(text = stringResource(R.string.app_name)) },
-                actions = { BarButton(Icons.Settings, stringResource(R.string.cd_settings), onSettings) },
+                actions = { BarButton(Icons.Settings, stringResource(R.string.cd_settings), { go(onSettings) }) },
             )
         },
     ) { padding ->
@@ -70,7 +92,7 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
             item(key = "record") {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
                     ButtonMMD(
-                        onClick = onRecord,
+                        onClick = { go(onRecord) },
                         modifier = Modifier.fillMaxWidth().height(64.dp).testTag("record"),
                     ) {
                         Icon(Icons.Mic, contentDescription = null, modifier = Modifier.size(24.dp))
@@ -89,7 +111,7 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .clickable { import.launch(arrayOf("audio/*")) }
+                        .clickable { takes.settle(); import.launch(arrayOf("audio/*")) }
                         .testTag("import")
                         .padding(horizontal = 20.dp, vertical = 12.dp),
                 ) {
@@ -112,7 +134,7 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .clickable { onTake(t.id) }
+                            .clickable { go { onTake(t.id) } }
                             .testTag("take_${t.id}")
                             .padding(horizontal = 20.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,

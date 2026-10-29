@@ -100,6 +100,34 @@ class Takes private constructor(context: Context) {
         _version.value++
     }
 
+    private val bin = Bin(dir, File(dir.parentFile, "takes-bin")).also { it.empty() }
+
+    private val _removed = MutableStateFlow<Take?>(null)
+    /** The take just deleted, while Undo is on offer. */
+    val removed: StateFlow<Take?> = _removed
+
+    /** A delete the user asked for: the take waits in the bin for Undo until [settle]. */
+    fun remove(id: Long) {
+        val t = get(id)
+        bin.put(id)
+        _removed.value = t
+        _version.value++
+    }
+
+    fun undo() {
+        if (bin.restore() != null) {
+            _removed.value = null
+            _version.value++
+        }
+    }
+
+    /** Makes a delete final: the user moved on. */
+    fun settle() {
+        if (_removed.value == null) return
+        bin.empty()
+        _removed.value = null
+    }
+
     fun delete(id: Long) {
         json(id).delete(); wav(id).delete(); pitch(id).delete()
         _version.value++

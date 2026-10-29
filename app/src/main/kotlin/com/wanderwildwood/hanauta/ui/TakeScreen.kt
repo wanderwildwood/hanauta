@@ -295,7 +295,7 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
         onChange = { change(it, -1) },
         onDelete = {
             Player.stop()
-            takes.delete(t.id)
+            takes.remove(t.id)
             onBack()
         },
         onDismiss = { more = false },
