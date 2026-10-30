@@ -559,23 +559,13 @@ private fun KeyDialog(chosen: Key, onPick: (Key) -> Unit, onDismiss: () -> Unit)
                         val key = Key(tonic, minor)
                         val on = key == chosen
                         val label = Words.key(context, key).substringBefore(' ')
-                        Box(
-                            Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .padding(vertical = 3.dp)
-                                .let { if (on) it.background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(4.dp)) else it.border(BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface), RoundedCornerShape(4.dp)) }
-                                .clickable { onPick(key) }
-                                .testTag("key_${tonic}_${if (minor) "m" else "M"}"),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            TextMMD(
-                                text = label,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = if (on) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
+                        HouseButton(
+                            label,
+                            { onPick(key) },
+                            Modifier.weight(1f).testTag("key_${tonic}_${if (minor) "m" else "M"}"),
+                            on = on,
+                            compact = true,
+                        )
                     }
                 }
             }
