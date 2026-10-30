@@ -9,7 +9,7 @@ device.
 
 | | |
 |---|---|
-| ![Takes, newest first](screenshots/1-takes.png) | ![A new take, with the click on](screenshots/2-record.png) |
+| ![Takes, newest first](screenshots/1-takes.png) | ![About: Privacy and Terms, with the page number in the corner](screenshots/2-about.png) |
 | ![A take on the piano roll, one note chosen](screenshots/3-piano-roll.png) | ![Send: MIDI, sheet music or the recording](screenshots/4-send.png) |
 
 Written in Kotlin and Jetpack Compose, using Mudita's own [MMD](https://github.com/mudita/MMD)
