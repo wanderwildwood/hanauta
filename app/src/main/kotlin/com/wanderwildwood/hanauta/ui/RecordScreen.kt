@@ -151,6 +151,8 @@ private fun ColumnScope.SetUp(prefs: Prefs, onRecord: () -> Unit) {
                     Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
+            }.onFailure {
+                android.widget.Toast.makeText(context, R.string.record_permission_no_settings, android.widget.Toast.LENGTH_LONG).show()
             }
         }
     }

@@ -155,6 +155,8 @@
     <string name="about_terms_heading">Terms</string>
     <string name="about_terms">This app is free software under the GNU General Public License v3. It comes with no warranty: use it at your own risk.</string>
     <string name="about_feed_the_llamas">feed the llamas</string>
+    <string name="about_no_browser_address">No browser is installed. The address is %1$s.</string>
+    <string name="record_permission_no_settings">The phone has no Settings page to open for this app. Turn the microphone on for it in the phone\'s own Settings.</string>
     <string name="about_no_browser">There is no browser on this phone to open that with.</string>
     <string name="about_close">Close</string>
     <string name="take_deleted">%1$s was deleted.</string>

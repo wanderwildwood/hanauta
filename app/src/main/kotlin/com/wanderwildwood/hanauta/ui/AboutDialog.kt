@@ -77,13 +77,8 @@ private fun LinkLine(text: Int, url: String) {
     }
 }
 
-private fun open(context: Context, url: String) {
-    runCatching {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }.onFailure {
-        Toast.makeText(context, context.getString(R.string.about_no_browser), Toast.LENGTH_SHORT).show()
-    }
-}
+private fun open(context: Context, url: String) =
+    openLink(context, url, context.getString(R.string.about_no_browser_address, url.removePrefix("https://")))
 
 /**
  * A llama at the foot of the About, which opens the page a donation goes to. The site's
