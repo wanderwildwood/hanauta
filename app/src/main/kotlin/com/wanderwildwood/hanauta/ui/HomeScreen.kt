@@ -118,7 +118,7 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
                     TextMMD(text = stringResource(R.string.home_import), style = MaterialTheme.typography.bodyMedium)
                     TextMMD(text = stringResource(R.string.home_import_note), style = MaterialTheme.typography.labelSmall)
                 }
-                HorizontalDividerMMD(thickness = 1.dp)
+                DottedRule(start = 20.dp, end = 20.dp)
             }
             if (all.isEmpty()) {
                 item(key = "empty") {
@@ -156,7 +156,7 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
                             )
                         }
                     }
-                    HorizontalDividerMMD(thickness = 1.dp)
+                    DottedRule(start = 20.dp, end = 20.dp)
                 }
             }
         }
