@@ -128,6 +128,19 @@ class Takes private constructor(context: Context) {
         _removed.value = null
     }
 
+    /**
+     * Replaces the whole library with the take files in [staged], a folder on the same disk (see
+     * [LibraryBackup.swapIn]). A take waiting for Undo goes for good first.
+     */
+    fun replaceAll(staged: File): Boolean {
+        bin.empty()
+        _removed.value = null
+        val ok = LibraryBackup.swapIn(staged, dir)
+        dir.mkdirs()
+        _version.value++
+        return ok
+    }
+
     fun delete(id: Long) {
         json(id).delete(); wav(id).delete(); pitch(id).delete()
         _version.value++

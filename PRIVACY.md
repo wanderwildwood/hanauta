@@ -16,6 +16,11 @@ music or the recording) to the place you choose in Android's own file picker, an
 press it; that place can be a folder on the phone or another app's storage, such as a Nextcloud
 folder, and what that app does with the file is up to it.
 
+**Save a backup** (Settings) writes every take, with its recording, notes and pitch, and the
+app's settings to one file you choose through the same file picker, and only when you ask.
+**Restore from a backup** reads such a file the same way, checks all of it first, and only then
+replaces the takes and settings; a wrong file changes nothing.
+
 The About dialog also holds the app's privacy and terms in short, and its source and licence
 links, the site address and the last line (the llama) each open a web address in your browser,
 only when you press them.

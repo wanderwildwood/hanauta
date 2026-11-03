@@ -50,6 +50,21 @@ class Prefs(context: Context) {
         get() = p.getBoolean("play_voice", true)
         set(v) = p.edit().putBoolean("play_voice", v).apply()
 
+    /** The choices a backup carries, by their stored keys (see [LibraryBackup.SETTING_KEYS]). */
+    fun backupValues(): Map<String, Any> =
+        p.all.filterKeys { it in LibraryBackup.SETTING_KEYS }.mapNotNull { (k, v) -> v?.let { k to it } }.toMap()
+
+    /** Puts back the choices from a backup; ones it does not hold are left as they are. */
+    fun restore(values: Map<String, Any>) {
+        val e = p.edit()
+        for ((k, v) in values) when (v) {
+            is Int -> e.putInt(k, v)
+            is Boolean -> e.putBoolean(k, v)
+            is String -> e.putString(k, v)
+        }
+        e.apply()
+    }
+
     companion object {
         const val MIN_TEMPO = 40
         const val MAX_TEMPO = 200

@@ -107,4 +107,6 @@ dependencies {
     implementation(libs.mmd)
 
     testImplementation(libs.junit)
+    // Android's org.json is a stub under unit tests; takes and the backup head are JSON.
+    testImplementation("org.json:json:20240303")
 }

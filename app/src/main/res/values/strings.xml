@@ -144,6 +144,23 @@
     <string name="settings_grid">Notes snap to</string>
     <string name="settings_play_voice">Play the recording under the notes</string>
     <string name="settings_turn">Turn sideways with the phone</string>
+    <string name="settings_backup_heading">Backup</string>
+    <string name="settings_save_backup">Save a backup</string>
+    <string name="settings_save_backup_note">Saves every take, with its recording and notes, and the choices on this page and the Record screen, to one file you pick.</string>
+    <string name="settings_restore">Restore from a backup</string>
+    <string name="settings_restore_armed">Restore — every take here is replaced by the file\'s; tap again to choose it</string>
+    <string name="backup_working">Saving the backup…</string>
+    <string name="backup_saved">Backup saved.</string>
+    <string name="backup_not_saved">The backup could not be written.</string>
+    <string name="restore_working">Restoring the backup…</string>
+    <plurals name="restore_done">
+        <item quantity="one">Restored. %1$d take.</item>
+        <item quantity="other">Restored. %1$d takes.</item>
+    </plurals>
+    <string name="restore_not_ours">That file is not a backup from this app. Nothing was changed.</string>
+    <string name="restore_newer">That backup was made by a newer version of this app. Update the app and try again. Nothing was changed.</string>
+    <string name="restore_damaged">That backup is damaged, so it was not used. Nothing was changed.</string>
+    <string name="restore_unreadable">That file could not be read. Nothing was changed.</string>
     <string name="take_time">%1$s of %2$s</string>
     <string name="take_page">page %1$d of %2$d</string>
 
