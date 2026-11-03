@@ -1,6 +1,15 @@
 package com.wanderwildwood.hanauta.ui
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.rememberCoroutineScope
+import com.wanderwildwood.hanauta.data.BackupFiles
+import com.wanderwildwood.hanauta.data.LibraryBackup
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -34,6 +43,37 @@ fun SettingsScreen(onBack: () -> Unit) {
     var v by remember { mutableIntStateOf(0) }
     var about by remember { mutableStateOf(false) }
     var grid by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    // A library of takes is mostly recordings, so both of these run off the main thread.
+    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        Toast.makeText(context, R.string.backup_working, Toast.LENGTH_SHORT).show()
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) { BackupFiles.save(context, uri) }
+            Toast.makeText(context, if (ok) R.string.backup_saved else R.string.backup_not_saved, if (ok) Toast.LENGTH_SHORT else Toast.LENGTH_LONG).show()
+        }
+    }
+    val restoreBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        Toast.makeText(context, R.string.restore_working, Toast.LENGTH_SHORT).show()
+        scope.launch {
+            val r = withContext(Dispatchers.IO) { BackupFiles.restore(context, uri) }
+            val message = when (r) {
+                is BackupFiles.Result.Done -> context.resources.getQuantityString(R.plurals.restore_done, r.takes, r.takes)
+                is BackupFiles.Result.Refused -> context.getString(
+                    when (r.kind) {
+                        LibraryBackup.Refused.Kind.NOT_A_BACKUP -> R.string.restore_not_ours
+                        LibraryBackup.Refused.Kind.NEWER -> R.string.restore_newer
+                        LibraryBackup.Refused.Kind.DAMAGED -> R.string.restore_damaged
+                    },
+                )
+                BackupFiles.Result.Unreadable -> context.getString(R.string.restore_unreadable)
+            }
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            v++
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -64,6 +104,17 @@ fun SettingsScreen(onBack: () -> Unit) {
                 SwitchRow(stringResource(R.string.settings_turn), on) {
                     prefs.turnWithPhone = it
                     v++
+                }
+            }
+            item(key = "backup_heading") { Heading(stringResource(R.string.settings_backup_heading)) }
+            item(key = "backup") {
+                SettingRow(stringResource(R.string.settings_save_backup), stringResource(R.string.settings_save_backup_note)) {
+                    runCatching { saveBackup.launch("hum-backup-${java.time.LocalDate.now()}.zip") }
+                }
+            }
+            item(key = "restore") {
+                ArmedRow(stringResource(R.string.settings_restore), stringResource(R.string.settings_restore_armed)) {
+                    runCatching { restoreBackup.launch(arrayOf("application/zip", "application/octet-stream")) }
                 }
             }
         }
