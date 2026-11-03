@@ -65,7 +65,7 @@ keeps it upright.
 
 **Send** (the share button) gives three files, named after the take:
 
-- **MIDI file**: one track of notes with the tempo, metre and key. In LMMS it is
+- **MIDI file**: one track of notes with the tempo, meter and key. In LMMS it is
   *Project → Import*; Ardour, Reaper, Bitwig and every other DAW open it the same way. LMMS
   keeps the file's tempo as automation, so its tempo box reads its own default (140) until you
   press play, and then follows the file.
@@ -110,7 +110,7 @@ For updates without doing this by hand, add this repository to
 
     https://github.com/wanderwildwood/hanauta
 
-## Licence
+## License
 
 GPL-3.0-only. See [LICENSE](LICENSE).
 
