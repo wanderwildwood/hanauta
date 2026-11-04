@@ -1,0 +1,8 @@
+{
+  "uniqueId": "tuner-pitch",
+  "name": "Tuner (pitch detection and Fourier transform code)",
+  "description": "The pitch detection (autocorrelation) and Fourier transform code that finds the notes in a recording, taken from Tuner (the pitch folder).",
+  "developers": [{ "name": "Michael Moessner" }],
+  "website": "https://github.com/woheller69/Tuner",
+  "licenses": ["GPL-3.0-or-later"]
+}
