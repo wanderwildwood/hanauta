@@ -140,7 +140,7 @@ fun PianoRoll(
         // every second or third row rather than only the Cs.
         val flats = NoteNames.flats(key)
         val chosenPitch = notes.getOrNull(selected)?.pitch
-        val nameH = measurer.measure("C4", TextStyle(fontSize = 14.sp)).size.height.toFloat()
+        val nameH = measurer.measure("C4", TextStyle(fontSize = NOTE_NAME_SIZE)).size.height.toFloat()
         val named = ArrayList<Float>()
         fun centre(pitch: Int) = (range.high - pitch + 0.5f) * rowH
         fun fits(pitch: Int) = named.none { abs(it - centre(pitch)) < nameH }
@@ -210,10 +210,18 @@ fun PianoRoll(
     }
 }
 
+/**
+ * The note names drawn down the roll's edge stay at 14 sp, under the house 16 sp floor on
+ * purpose (the same exception as the Calendar month grid): they are part of the drawing, one
+ * per row of a roll whose rows are often shorter than a 16 sp line, and at 16 sp every second
+ * name would be left out where it no longer fits.
+ */
+private val NOTE_NAME_SIZE = 14.sp
+
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.label(
     measurer: TextMeasurer, text: String, at: Offset, rowH: Float, ink: Color, bold: Boolean,
 ) {
-    val style = TextStyle(color = ink, fontSize = 14.sp, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal)
+    val style = TextStyle(color = ink, fontSize = NOTE_NAME_SIZE, fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal)
     val m = measurer.measure(text, style)
     // Kept inside the roll: a row shorter than the name would push the top or bottom one out.
     val y = (at.y + (rowH - m.size.height) / 2).coerceIn(0f, maxOf(0f, size.height - m.size.height))
