@@ -438,7 +438,10 @@ private fun RowScope.Tool(text: String, enabled: Boolean, tag: String, bold: Boo
             text = text,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.Normal,
-            maxLines = 1,
+            textAlign = TextAlign.Center,
+            // Two lines, so a long label ("Join next") wraps rather than being cut where eight
+            // tools share one landscape row at the 16 sp floor; 48 dp holds two lines.
+            maxLines = 2,
         )
     }
 }
