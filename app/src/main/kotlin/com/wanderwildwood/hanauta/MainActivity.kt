@@ -12,6 +12,7 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.mudita.mmd.ThemeMMD
 import com.wanderwildwood.hanauta.audio.Recording
 import com.wanderwildwood.hanauta.data.Prefs
+import com.wanderwildwood.hanauta.ui.ArmedScope
 import com.wanderwildwood.hanauta.ui.HumApp
 import com.wanderwildwood.hanauta.ui.monochrome
 import java.io.File
@@ -31,9 +32,11 @@ class MainActivity : ComponentActivity() {
         turnListener = prefs.onTurnChanged { turner.set(it) }
         setContent {
             ThemeMMD(colorScheme = monochrome) {
-                // A debug build names its rows for the emulator tests; a release names none.
-                Box(Modifier.semantics { testTagsAsResourceId = BuildConfig.DEBUG }) {
-                    HumApp()
+                ArmedScope {
+                    // A debug build names its rows for the emulator tests; a release names none.
+                    Box(Modifier.semantics { testTagsAsResourceId = BuildConfig.DEBUG }) {
+                        HumApp()
+                    }
                 }
             }
         }

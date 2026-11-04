@@ -514,19 +514,24 @@ private fun TakeDialog(take: Take, onChange: (Take) -> Unit, onDelete: () -> Uni
     }
 
     EInkDialog(onDismiss = onDismiss) {
-        TextMMD(text = stringResource(R.string.take_more_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-        SettingRow(stringResource(R.string.take_key), Words.key(context, take.key)) { picking = "key" }
-        SettingRow(stringResource(R.string.take_grid), Words.grid(context, take.grid)) { picking = "grid" }
-        SettingRow(
-            stringResource(R.string.take_tempo),
-            if (take.clicked) Words.tempo(context, take.tempo) else stringResource(R.string.take_tempo_guessed, Words.tempo(context, take.tempo)),
-        ) { picking = "tempo" }
-        ArmedRow(stringResource(R.string.take_replace), stringResource(R.string.take_replace_armed)) {
-            onChange(replaced(take))
-            onDismiss()
+        // A dialog is its own window: its armed rows need a scope of their own.
+        ArmedScope(Modifier.fillMaxWidth()) {
+            Column {
+                TextMMD(text = stringResource(R.string.take_more_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                SettingRow(stringResource(R.string.take_key), Words.key(context, take.key)) { picking = "key" }
+                SettingRow(stringResource(R.string.take_grid), Words.grid(context, take.grid)) { picking = "grid" }
+                SettingRow(
+                    stringResource(R.string.take_tempo),
+                    if (take.clicked) Words.tempo(context, take.tempo) else stringResource(R.string.take_tempo_guessed, Words.tempo(context, take.tempo)),
+                ) { picking = "tempo" }
+                ArmedRow(stringResource(R.string.take_replace), stringResource(R.string.take_replace_armed)) {
+                    onChange(replaced(take))
+                    onDismiss()
+                }
+                ArmedRow(stringResource(R.string.take_delete), stringResource(R.string.take_delete_armed)) { onDelete() }
+                DialogButton(stringResource(R.string.close), onClick = onDismiss)
+            }
         }
-        ArmedRow(stringResource(R.string.take_delete), stringResource(R.string.take_delete_armed)) { onDelete() }
-        DialogButton(stringResource(R.string.close), onClick = onDismiss)
     }
 
     when (picking) {
