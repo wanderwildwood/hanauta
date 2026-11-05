@@ -149,12 +149,15 @@ class RecordService : Service() {
         val id = System.currentTimeMillis()
         val takes = Takes.get(this)
         val file = takes.wav(id)
+        // A shared file's copy is read as the shared file itself would be: through the decoder,
+        // which stops at the longest take, not whole into memory.
+        val shared = uri.scheme == "file" && File(uri.path!!).parentFile == Recording.inbox(this)
         val read = runCatching {
-            if (uri.scheme == "file") Wav.read(File(uri.path!!)) ?: Decode.read(this, uri)
+            if (uri.scheme == "file" && !shared) Wav.read(File(uri.path!!)) ?: Decode.read(this, uri)
             else Decode.read(this, uri)
         }.getOrNull()
         // A shared file's copy has done its work once read.
-        if (uri.scheme == "file") File(uri.path!!).takeIf { it.parentFile == Recording.inbox(this) }?.delete()
+        if (shared) File(uri.path!!).delete()
         if (read == null || read.first.isEmpty()) {
             Recording.stage.value = Stage.Failed(Reason.Unreadable)
             return
