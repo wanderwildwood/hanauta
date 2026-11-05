@@ -25,7 +25,7 @@ from Michael Moessner's [Tuner](https://codeberg.org/thetwom/Tuner).
 - **With the click off**, sing in your own time; the tempo is worked out from the notes
   afterwards, and can be set by hand if it is wrong.
 - **Read a recording** makes a take from a sound file already on the phone, a voice memo
-  for one.
+  for one. A sound file shared to Hum from another app is read the same way.
 - Recording carries on with the screen off. Back while recording stops the take and keeps it.
 
 ## From voice to notes

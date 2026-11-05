@@ -3,6 +3,9 @@ package com.wanderwildwood.hanauta.audio
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.OpenableColumns
+import java.io.File
+import kotlin.concurrent.thread
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -43,6 +46,50 @@ object Recording {
     fun import(context: Context, uri: Uri, name: String?, beatsPerBar: Int) {
         if (busy) return
         stage.value = Stage.Finding(0f)
+        startImport(context, uri, name, beatsPerBar)
+    }
+
+    /**
+     * A sound file another app shared with Hum, read the same way. The loan to read it may end
+     * with the share, so it is copied into the app's own storage first and read from there;
+     * the copy is removed once it has been read.
+     */
+    fun importShared(context: Context, uri: Uri, beatsPerBar: Int) {
+        if (busy) return
+        stage.value = Stage.Finding(0f)
+        val app = context.applicationContext
+        thread(name = "hum-shared") {
+            val inbox = inbox(app)
+            inbox.listFiles()?.forEach { it.delete() }
+            val copy = File(inbox, "shared-${System.currentTimeMillis()}")
+            val name = runCatching {
+                app.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                    if (c.moveToFirst()) c.getString(0)?.substringBeforeLast('.') else null
+                }
+            }.getOrNull()
+            val copied = runCatching {
+                inbox.mkdirs()
+                app.contentResolver.openInputStream(uri)!!.use { input ->
+                    copy.outputStream().use { input.copyTo(it) }
+                }
+            }.isSuccess
+            if (!copied || copy.length() == 0L) {
+                copy.delete()
+                stage.value = Stage.Failed(Reason.Unreadable)
+                return@thread
+            }
+            // No name to go by: blank, so the take is named for when it was read, not for the copy.
+            runCatching { startImport(app, Uri.fromFile(copy), name ?: "", beatsPerBar) }.onFailure {
+                copy.delete()
+                stage.value = Stage.Failed(Reason.Unreadable)
+            }
+        }
+    }
+
+    /** Where a shared file waits to be read. */
+    internal fun inbox(context: Context) = File(context.cacheDir, "shared")
+
+    private fun startImport(context: Context, uri: Uri, name: String?, beatsPerBar: Int) {
         context.startForegroundService(
             Intent(context, RecordService::class.java)
                 .setAction(RecordService.IMPORT)

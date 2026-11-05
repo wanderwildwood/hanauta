@@ -153,6 +153,8 @@ class RecordService : Service() {
             if (uri.scheme == "file") Wav.read(File(uri.path!!)) ?: Decode.read(this, uri)
             else Decode.read(this, uri)
         }.getOrNull()
+        // A shared file's copy has done its work once read.
+        if (uri.scheme == "file") File(uri.path!!).takeIf { it.parentFile == Recording.inbox(this) }?.delete()
         if (read == null || read.first.isEmpty()) {
             Recording.stage.value = Stage.Failed(Reason.Unreadable)
             return

@@ -1,5 +1,6 @@
 package com.wanderwildwood.hanauta
 
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -27,7 +28,10 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null) debugImport()
+        if (savedInstanceState == null) {
+            debugImport()
+            readShared(intent)
+        }
         turner.set(prefs.turnWithPhone)
         // The switch in Settings takes effect at once.
         turnListener = prefs.onTurnChanged { turner.set(it) }
@@ -41,6 +45,27 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readShared(intent)
+    }
+
+    /**
+     * A sound file shared to Hum from another app: read in at once, as "Read a recording" would,
+     * and the take opens when its notes are found. Coming back to the app from Recents brings the
+     * same share again; it is not read twice.
+     */
+    private fun readShared(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND) return
+        if (intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
+        @Suppress("DEPRECATION")
+        val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
+            ?: return
+        Recording.importShared(this, uri, prefs.beatsPerBar)
     }
 
     override fun onResume() {

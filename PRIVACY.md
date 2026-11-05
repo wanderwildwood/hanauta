@@ -8,7 +8,8 @@ None of it goes into Android's cloud backup or a phone-to-phone transfer, and un
 app removes all of it. A take deleted in the app is deleted with its recording.
 
 The microphone is used only between pressing Record and pressing Stop, and a notification shows
-for as long as it is. **Read a recording** reads only the file you pick.
+for as long as it is. **Read a recording** reads only the file you pick, and a sound file shared to Hum
+from another app is copied in, read, and the copy removed.
 
 **Send** writes a take as a file and hands it to the app you choose in the share sheet, and only
 when you press it. Where it goes after that is up to you. **Save as** writes a take (MIDI, sheet
