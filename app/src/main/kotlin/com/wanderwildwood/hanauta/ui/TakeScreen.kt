@@ -6,7 +6,6 @@ import android.content.res.Configuration
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -451,7 +450,7 @@ private fun SendDialog(take: Take, onDismiss: () -> Unit) {
     val context = LocalContext.current
     // One file picker for each kind, since a picker is told the type of file up front.
     val savers = Send.What.entries.associateWith { what ->
-        rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(what.saveMime)) { uri ->
+        rememberLauncherForActivityResult(FilesCreateDocument(what.saveMime)) { uri ->
             if (uri != null) Send.save(context, take, what, uri)
             onDismiss()
         }

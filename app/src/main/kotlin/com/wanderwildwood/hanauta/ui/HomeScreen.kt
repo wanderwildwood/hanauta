@@ -2,7 +2,6 @@ package com.wanderwildwood.hanauta.ui
 
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -51,7 +50,7 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
     val all = remember(version) { takes.all() }
     val prefs = remember { Prefs(context) }
 
-    val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val import = rememberLauncherForActivityResult(FilesOpenDocument(writable = true)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching { context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
         Recording.import(context, uri, null, prefs.beatsPerBar)

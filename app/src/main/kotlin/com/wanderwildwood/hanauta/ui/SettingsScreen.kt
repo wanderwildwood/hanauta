@@ -3,7 +3,6 @@ package com.wanderwildwood.hanauta.ui
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.rememberCoroutineScope
 import com.wanderwildwood.hanauta.data.BackupFiles
 import com.wanderwildwood.hanauta.data.LibraryBackup
@@ -46,7 +45,7 @@ fun SettingsScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
 
     // A library of takes is mostly recordings, so both of these run off the main thread.
-    val saveBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+    val saveBackup = rememberLauncherForActivityResult(FilesCreateDocument("application/zip")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         Toast.makeText(context, R.string.backup_working, Toast.LENGTH_SHORT).show()
         scope.launch {
@@ -54,7 +53,7 @@ fun SettingsScreen(onBack: () -> Unit) {
             Toast.makeText(context, if (ok) R.string.backup_saved else R.string.backup_not_saved, if (ok) Toast.LENGTH_SHORT else Toast.LENGTH_LONG).show()
         }
     }
-    val restoreBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val restoreBackup = rememberLauncherForActivityResult(FilesOpenDocument(writable = false)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         Toast.makeText(context, R.string.restore_working, Toast.LENGTH_SHORT).show()
         scope.launch {

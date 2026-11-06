@@ -20,6 +20,8 @@
             <action android:name="android.intent.action.PROCESS_TEXT" />
             <data android:mimeType="text/plain" />
         </intent>
+        <!-- Files (Cabinet), so the pickers can ask its e-ink screens first. -->
+        <package android:name="com.wanderwildwood.tana" />
     </queries>
 
     <application
