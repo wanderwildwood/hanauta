@@ -87,7 +87,7 @@ fun HomeScreen(onRecord: () -> Unit, onTake: (Long) -> Unit, onSettings: () -> U
         },
     ) { padding ->
         val state = rememberLazyListState()
-        PagedColumn(Modifier.padding(padding).fillMaxSize(), state = state) {
+        PagedColumn(Modifier.padding(padding).fillMaxSize(), state = state, showCutRow = true) {
             item(key = "record") {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) {
                     ButtonMMD(
