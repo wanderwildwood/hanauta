@@ -105,6 +105,11 @@ fun SettingsScreen(onBack: () -> Unit) {
                     v++
                 }
             }
+            item(key = "dark") {
+                SwitchRow(stringResource(R.string.settings_dark), DarkMode.on, note = stringResource(R.string.settings_dark_note)) {
+                    DarkMode.set(context, it)
+                }
+            }
             item(key = "backup_heading") { Heading(stringResource(R.string.settings_backup_heading)) }
             item(key = "backup") {
                 SettingRow(stringResource(R.string.settings_save_backup), stringResource(R.string.settings_save_backup_note)) {
