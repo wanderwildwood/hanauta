@@ -39,6 +39,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.text.input.ImeAction
 
 /** An icon in a top bar, with a target a thumb can find. */
 @Composable
@@ -189,6 +191,8 @@ fun Field(
     hint: String? = null,
     number: Boolean = false,
     modifier: Modifier = Modifier,
+    /** The keyboard's Done key, where the field is the last thing to type before the main button. */
+    onDone: (() -> Unit)? = null,
 ) {
     Column(modifier.fillMaxWidth().padding(vertical = 6.dp)) {
         TextMMD(text = label, style = MaterialTheme.typography.labelSmall)
@@ -203,7 +207,9 @@ fun Field(
             keyboardOptions = KeyboardOptions(
                 capitalization = if (number) KeyboardCapitalization.None else KeyboardCapitalization.Sentences,
                 keyboardType = if (number) KeyboardType.Number else KeyboardType.Text,
+                imeAction = if (onDone != null) ImeAction.Done else ImeAction.Default,
             ),
+            keyboardActions = KeyboardActions(onDone = onDone?.let { done -> { done() } }),
             modifier = Modifier.fillMaxWidth().textActions(),
         )
         }

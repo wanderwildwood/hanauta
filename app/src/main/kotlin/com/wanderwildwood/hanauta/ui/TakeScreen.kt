@@ -65,6 +65,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 
 /** Bars to a page of the roll, upright; turned sideways the roll is wider and takes twice as many. */
 private const val BARS = 2
@@ -497,12 +501,21 @@ private fun SendDialog(take: Take, onDismiss: () -> Unit) {
 @Composable
 private fun RenameDialog(name: String, onSave: (String) -> Unit, onDismiss: () -> Unit) {
     var value by remember { mutableStateOf(name) }
+    val field = remember { FocusRequester() }
+    val save = { if (value.isNotBlank()) onSave(value.trim()) }
     EInkDialog(onDismiss = onDismiss) {
-        TextMMD(text = stringResource(R.string.take_rename_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-        Field(stringResource(R.string.take_rename), value, { value = it.replace('\n', ' ').take(80) }, modifier = Modifier.testTag("name"))
-        DialogButton(stringResource(R.string.save), filled = true) {
-            if (value.isNotBlank()) onSave(value.trim())
+        // The field is what the dialog is for: it takes the focus as it opens and the keyboard
+        // comes up. Asked from inside the dialog, a frame after it is drawn: the field lives in
+        // the dialog's own window, which a request from the screen beneath does not reach.
+        val keyboardNow = LocalSoftwareKeyboardController.current
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { field.requestFocus() }
+            keyboardNow?.show()
         }
+        TextMMD(text = stringResource(R.string.take_rename_title), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+        Field(stringResource(R.string.take_rename), value, { value = it.replace('\n', ' ').take(80) }, modifier = Modifier.focusRequester(field).testTag("name"), onDone = save)
+        DialogButton(stringResource(R.string.save), filled = true) { save() }
         DialogButton(stringResource(R.string.cancel), onClick = onDismiss)
     }
 }
@@ -589,13 +602,21 @@ private fun KeyDialog(chosen: Key, onPick: (Key) -> Unit, onDismiss: () -> Unit)
 @Composable
 private fun TempoDialog(tempo: Float, onPick: (Float) -> Unit, onDismiss: () -> Unit) {
     var value by remember { mutableStateOf(tempo.roundToInt().toString()) }
+    val field = remember { FocusRequester() }
+    val pick = { value.toIntOrNull()?.let { v -> onPick(v.coerceIn(Prefs.MIN_TEMPO, Prefs.MAX_TEMPO).toFloat()) }; Unit }
     EInkDialog(onDismiss = onDismiss) {
-        TextMMD(text = stringResource(R.string.take_tempo), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-        Field(stringResource(R.string.take_tempo), value, { value = it.filter(Char::isDigit).take(3) }, number = true)
-        val v = value.toIntOrNull()
-        DialogButton(stringResource(R.string.save), filled = true) {
-            if (v != null) onPick(v.coerceIn(Prefs.MIN_TEMPO, Prefs.MAX_TEMPO).toFloat())
+        // The field is what the dialog is for: it takes the focus as it opens and the keyboard
+        // comes up. Asked from inside the dialog, a frame after it is drawn: the field lives in
+        // the dialog's own window, which a request from the screen beneath does not reach.
+        val keyboardNow = LocalSoftwareKeyboardController.current
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { field.requestFocus() }
+            keyboardNow?.show()
         }
+        TextMMD(text = stringResource(R.string.take_tempo), style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+        Field(stringResource(R.string.take_tempo), value, { value = it.filter(Char::isDigit).take(3) }, number = true, modifier = Modifier.focusRequester(field), onDone = pick)
+        DialogButton(stringResource(R.string.save), filled = true) { pick() }
         DialogButton(stringResource(R.string.cancel), onClick = onDismiss)
     }
 }
