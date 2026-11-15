@@ -103,6 +103,8 @@
     <string name="send_recording">The recording</string>
     <string name="send_recording_note">WAV, as it was sung</string>
     <string name="send_failed">It could not be sent.</string>
+    <string name="play_failed">This take could not be played. The phone\'s speaker would not take the sound.</string>
+    <string name="record_click_failed">The click could not play. Count in with the numbers.</string>
 
     <!-- The take's own settings -->
     <string name="take_more_title">This take</string>

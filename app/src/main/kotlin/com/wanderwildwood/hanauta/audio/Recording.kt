@@ -30,8 +30,13 @@ object Recording {
     internal val stage = MutableStateFlow<Stage>(Stage.Idle)
     val now: StateFlow<Stage> = stage
 
+    /** True while a take that asked for the click is being made without one: the speaker would not play it. */
+    internal val clickSilentFlow = MutableStateFlow(false)
+    val clickSilent: StateFlow<Boolean> = clickSilentFlow
+
     fun start(context: Context, setup: Setup) {
         if (busy) return
+        clickSilentFlow.value = false
         stage.value = if (setup.click) Stage.CountIn(1, setup.beatsPerBar) else Stage.Listening(0, false)
         context.startForegroundService(
             Intent(context, RecordService::class.java)

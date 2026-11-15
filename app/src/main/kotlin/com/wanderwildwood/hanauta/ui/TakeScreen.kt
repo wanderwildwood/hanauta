@@ -97,6 +97,15 @@ fun TakeScreen(id: Long, onBack: () -> Unit) {
     val wide = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val playing by Player.playing.collectAsState()
     val position by Player.position.collectAsState()
+    // A take the speaker would not play says so along the foot, until the next press.
+    val playFailed by Player.failed.collectAsState()
+    val cannotPlay = stringResource(R.string.play_failed)
+    LaunchedEffect(playFailed) {
+        if (playFailed) {
+            Notice.say(cannotPlay)
+            Player.seenFailure()
+        }
+    }
     val delete = rememberArmed()
 
     // Leaving the take stops the playing; turning the phone, which builds the screen again, does not.

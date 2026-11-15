@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
@@ -15,6 +16,9 @@ import com.wanderwildwood.hanauta.audio.Recording
 import com.wanderwildwood.hanauta.data.Prefs
 import com.wanderwildwood.hanauta.ui.ArmedScope
 import com.wanderwildwood.hanauta.ui.HumApp
+import com.wanderwildwood.hanauta.ui.Notice
+import com.wanderwildwood.hanauta.ui.NoticeStrip
+import com.wanderwildwood.hanauta.ui.onEachPress
 import com.wanderwildwood.hanauta.ui.houseTypography
 import com.wanderwildwood.hanauta.ui.monochrome
 import java.io.File
@@ -39,8 +43,13 @@ class MainActivity : ComponentActivity() {
             ThemeMMD(colorScheme = monochrome, typography = houseTypography) {
                 ArmedScope {
                     // A debug build names its rows for the emulator tests; a release names none.
-                    Box(Modifier.semantics { testTagsAsResourceId = BuildConfig.DEBUG }) {
+                    // A notice along the foot stays until the next press (see Notice).
+                    Box(
+                        Modifier.semantics { testTagsAsResourceId = BuildConfig.DEBUG }
+                            .onEachPress { Notice.clear() },
+                    ) {
                         HumApp()
+                        NoticeStrip(Modifier.align(Alignment.BottomCenter))
                     }
                 }
             }
@@ -66,6 +75,11 @@ class MainActivity : ComponentActivity() {
             ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
             ?: return
         Recording.importShared(this, uri, prefs.beatsPerBar)
+    }
+
+    override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+        Notice.pressed(event)
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onResume() {

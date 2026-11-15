@@ -31,12 +31,24 @@ object Player {
      */
     val position: StateFlow<Int> = _position
 
+    private val _failed = MutableStateFlow(false)
+    /**
+     * True when the last play could not reach the speaker (no output to open, or one that
+     * refused the sound). The take's screen says so; the next play tries again.
+     */
+    val failed: StateFlow<Boolean> = _failed
+
+    fun seenFailure() {
+        _failed.value = false
+    }
+
     @Volatile private var on = false
     @Volatile private var track: AudioTrack? = null
 
     fun play(notes: List<Note>, tempo: Float, fromTick: Int, voice: File?, beatZero: Float) {
         stop()
         on = true
+        _failed.value = false
         _position.value = (fromTick / PPQ) * PPQ
         _playing.value = true
         val secondsPerTick = 60.0 / (tempo * PPQ)
@@ -55,6 +67,7 @@ object Player {
                 var off = 0
                 while (on && off < pcm.size) {
                     val w = t.write(pcm, off, minOf(4096, pcm.size - off))
+                    if (w < 0) _failed.value = true
                     if (w <= 0) break
                     off += w
                     follow(t, fromTick, secondsPerTick)
@@ -69,6 +82,9 @@ object Player {
                         Thread.sleep(20)
                     }
                 }
+            } catch (e: Exception) {
+                // A track that would not open or play: said on the take's screen, not a crash.
+                if (on) _failed.value = true
             } finally {
                 track?.let { runCatching { it.pause(); it.flush(); it.release() } }
                 track = null

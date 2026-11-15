@@ -4,7 +4,6 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.wanderwildwood.hanauta.R
 import com.wanderwildwood.hanauta.data.Take
@@ -38,7 +37,8 @@ object Send {
         val ok = runCatching {
             context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(bytes(context, take, what)) }
         }.isSuccess
-        Toast.makeText(context, context.getString(if (ok) R.string.save_done else R.string.save_failed), Toast.LENGTH_LONG).show()
+        // Said along the foot until the next press, not in a toast that goes by itself.
+        Notice.say(context.getString(if (ok) R.string.save_done else R.string.save_failed))
     }
 
     fun send(context: Context, take: Take, what: What) {
@@ -56,7 +56,7 @@ object Send {
             send.clipData = ClipData.newRawUri(file.name, uri)
             context.startActivity(Intent.createChooser(send, file.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }.onFailure {
-            Toast.makeText(context, context.getString(R.string.send_failed), Toast.LENGTH_LONG).show()
+            Notice.say(context.getString(R.string.send_failed))
         }
     }
 

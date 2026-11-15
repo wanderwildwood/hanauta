@@ -1,6 +1,5 @@
 package com.wanderwildwood.hanauta.ui
 
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,15 +46,16 @@ fun SettingsScreen(onBack: () -> Unit) {
     // A library of takes is mostly recordings, so both of these run off the main thread.
     val saveBackup = rememberLauncherForActivityResult(FilesCreateDocument("application/zip")) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        Toast.makeText(context, R.string.backup_working, Toast.LENGTH_SHORT).show()
+        Notice.say(context.getString(R.string.backup_working))
         scope.launch {
             val ok = withContext(Dispatchers.IO) { BackupFiles.save(context, uri) }
-            Toast.makeText(context, if (ok) R.string.backup_saved else R.string.backup_not_saved, if (ok) Toast.LENGTH_SHORT else Toast.LENGTH_LONG).show()
+            // Said along the foot until the next press, not in a toast that goes by itself.
+            Notice.say(context.getString(if (ok) R.string.backup_saved else R.string.backup_not_saved))
         }
     }
     val restoreBackup = rememberLauncherForActivityResult(FilesOpenDocument(writable = false)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        Toast.makeText(context, R.string.restore_working, Toast.LENGTH_SHORT).show()
+        Notice.say(context.getString(R.string.restore_working))
         scope.launch {
             val r = withContext(Dispatchers.IO) { BackupFiles.restore(context, uri) }
             val message = when (r) {
@@ -69,7 +69,7 @@ fun SettingsScreen(onBack: () -> Unit) {
                 )
                 BackupFiles.Result.Unreadable -> context.getString(R.string.restore_unreadable)
             }
-            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            Notice.say(message)
             v++
         }
     }

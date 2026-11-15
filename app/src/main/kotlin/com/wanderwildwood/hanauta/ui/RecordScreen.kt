@@ -55,6 +55,7 @@ fun RecordScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { Prefs(context) }
     val stage by Recording.now.collectAsState()
+    val clickSilent by Recording.clickSilent.collectAsState()
     val busy = stage.let { it is Stage.CountIn || it is Stage.Listening || it is Stage.Finding }
 
     // Back while recording stops the take, which is then kept; never a take lost to a stray press.
@@ -80,7 +81,12 @@ fun RecordScreen(onBack: () -> Unit) {
             Modifier.padding(padding).fillMaxSize().padding(horizontal = 20.dp),
         ) {
             when (val s = stage) {
-                is Stage.CountIn -> Big(stringResource(R.string.record_count_in), "${s.beat}", stop = true)
+                is Stage.CountIn -> Big(
+                    stringResource(R.string.record_count_in),
+                    "${s.beat}",
+                    note = if (clickSilent) stringResource(R.string.record_click_failed) else null,
+                    stop = true,
+                )
                 is Stage.Listening -> Big(
                     stringResource(R.string.record_listening),
                     Words.duration(s.seconds.toFloat()),
@@ -152,7 +158,7 @@ private fun ColumnScope.SetUp(prefs: Prefs, onRecord: () -> Unit) {
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
             }.onFailure {
-                android.widget.Toast.makeText(context, R.string.record_permission_no_settings, android.widget.Toast.LENGTH_LONG).show()
+                Notice.say(context.getString(R.string.record_permission_no_settings))
             }
         }
     }

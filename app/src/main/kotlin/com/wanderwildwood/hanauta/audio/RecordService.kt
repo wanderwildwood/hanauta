@@ -83,14 +83,17 @@ class RecordService : Service() {
 
         val beatSeconds = 60f / tempo
         val countIn = if (click) beats * beatSeconds else 0f
-        val clicker = if (click) Clicker(tempo, beats) else null
+        // A speaker that will not take the click leaves the take to be counted in by the numbers
+        // on the screen, which says the click could not play; the recording goes on regardless.
+        val clicker = if (click) runCatching { Clicker(tempo, beats) }.getOrNull() else null
+        if (click && clicker == null) Recording.clickSilentFlow.value = true
         val recTs = AudioTimestamp()
         var beatZero = countIn
         var aligned = !click
 
         Wav.Writer(file, RATE).use { wav ->
             rec.startRecording()
-            clicker?.start()
+            if (clicker != null && runCatching { clicker.start() }.isFailure) Recording.clickSilentFlow.value = true
             val block = ShortArray(RATE / 20)
             var lastSecond = -1
             var lastBeat = 0
