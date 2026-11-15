@@ -573,7 +573,7 @@ private fun KeyDialog(chosen: Key, onPick: (Key) -> Unit, onDismiss: () -> Unit)
                         HouseButton(
                             label,
                             { onPick(key) },
-                            Modifier.weight(1f).testTag("key_${tonic}_${if (minor) "m" else "M"}").semantics { role = Role.RadioButton; selected = on },
+                            Modifier.weight(1f).testTag("key_${tonic}_${if (minor) "m" else "M"}").semantics { role = Role.RadioButton; this.selected = on },
                             on = on,
                             compact = true,
                         )
