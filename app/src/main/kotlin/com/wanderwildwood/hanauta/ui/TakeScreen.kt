@@ -61,6 +61,10 @@ import com.wanderwildwood.hanauta.music.PPQ
 import com.wanderwildwood.hanauta.music.Quantise
 import com.wanderwildwood.hanauta.music.Undo
 import kotlin.math.roundToInt
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
 
 /** Bars to a page of the roll, upright; turned sideways the roll is wider and takes twice as many. */
 private const val BARS = 2
@@ -569,7 +573,7 @@ private fun KeyDialog(chosen: Key, onPick: (Key) -> Unit, onDismiss: () -> Unit)
                         HouseButton(
                             label,
                             { onPick(key) },
-                            Modifier.weight(1f).testTag("key_${tonic}_${if (minor) "m" else "M"}"),
+                            Modifier.weight(1f).testTag("key_${tonic}_${if (minor) "m" else "M"}").semantics { role = Role.RadioButton; selected = on },
                             on = on,
                             compact = true,
                         )
