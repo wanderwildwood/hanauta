@@ -55,14 +55,14 @@ import androidx.compose.ui.text.TextRange
 fun Modifier.textActions(field: TextFieldState? = null): Modifier {
     val context = LocalContext.current
     val view = LocalView.current
+    // This app never offers itself.
+    val notShown = NOT_SHOWN + context.packageName
     val apps = remember {
         val query = Intent(Intent.ACTION_PROCESS_TEXT).setType("text/plain")
         // The flags-object overload is Android 13; the Kompakt is 12.
         @Suppress("DEPRECATION")
         context.packageManager.queryIntentActivities(query, 0).filter { it.activityInfo.exported }
     }
-    // This app is never offered in its own menu.
-    val notShown = NOT_SHOWN + context.packageName
     val actions = remember {
         apps.filter { it.activityInfo.packageName !in notShown }
             .map { ComponentName(it.activityInfo.packageName, it.activityInfo.name) to it.loadLabel(context.packageManager).toString() }
@@ -182,6 +182,7 @@ private fun showRest(view: View, items: List<TextContextMenuItem>, session: Text
         else (pressY - 88 * dp - list.measuredHeight).toInt().coerceAtLeast(0)
     val x = ((root.width - list.measuredWidth) / 2).coerceAtLeast(0)
     popup.showAtLocation(root, Gravity.TOP or Gravity.START, x, y)
+    DarkMode.window(list)
 }
 
 /** How many of Compose's items stay on the bar before the ⋮; Mudita's bar fits three buttons. */

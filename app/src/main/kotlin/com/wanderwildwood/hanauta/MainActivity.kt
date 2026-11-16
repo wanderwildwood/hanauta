@@ -1,5 +1,6 @@
 package com.wanderwildwood.hanauta
 
+import com.wanderwildwood.hanauta.ui.DarkSelection
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -40,7 +41,7 @@ class MainActivity : ComponentActivity() {
         // The switch in Settings takes effect at once.
         turnListener = prefs.onTurnChanged { turner.set(it) }
         setContent {
-            ThemeMMD(colorScheme = monochrome, typography = houseTypography) {
+            ThemeMMD(colorScheme = monochrome, typography = houseTypography) { DarkSelection {
                 ArmedScope {
                     // A debug build names its rows for the emulator tests; a release names none.
                     // A notice along the foot stays until the next press (see Notice).
@@ -52,7 +53,7 @@ class MainActivity : ComponentActivity() {
                         NoticeStrip(Modifier.align(Alignment.BottomCenter))
                     }
                 }
-            }
+            } }
         }
     }
 
