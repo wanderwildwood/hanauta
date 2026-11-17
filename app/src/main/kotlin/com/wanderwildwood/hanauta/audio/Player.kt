@@ -44,28 +44,34 @@ object Player {
 
     @Volatile private var on = false
     @Volatile private var track: AudioTrack? = null
+    /** Which play is the current one: an older one still rendering stands down when it sees a newer. */
+    private val generation = java.util.concurrent.atomic.AtomicInteger()
 
     fun play(notes: List<Note>, tempo: Float, fromTick: Int, voice: File?, beatZero: Float) {
         stop()
+        val mine = generation.incrementAndGet()
+        fun current() = on && generation.get() == mine
         on = true
         _failed.value = false
         _position.value = (fromTick / PPQ) * PPQ
         _playing.value = true
         val secondsPerTick = 60.0 / (tempo * PPQ)
         thread(name = "hum-play") {
+            var own: AudioTrack? = null
             try {
                 val pcm = render(notes, tempo, fromTick, voice, beatZero)
-                if (!on || pcm.isEmpty()) return@thread
+                if (!current() || pcm.isEmpty()) return@thread
                 val t = AudioTrack.Builder()
                     .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build())
                     .setAudioFormat(AudioFormat.Builder().setSampleRate(RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
                     .setTransferMode(AudioTrack.MODE_STREAM)
                     .setBufferSizeInBytes(AudioTrack.getMinBufferSize(RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT) * 4)
                     .build()
+                own = t
                 track = t
                 t.play()
                 var off = 0
-                while (on && off < pcm.size) {
+                while (current() && off < pcm.size) {
                     val w = t.write(pcm, off, minOf(4096, pcm.size - off))
                     if (w < 0) _failed.value = true
                     if (w <= 0) break
@@ -74,22 +80,25 @@ object Player {
                 }
                 // Let what is buffered finish before letting go; no longer than it could take,
                 // in case the head never moves (no speaker to move it).
-                if (on) {
+                if (current()) {
                     t.stop()
                     val deadline = System.currentTimeMillis() + 1500
-                    while (on && t.playbackHeadPosition < pcm.size && System.currentTimeMillis() < deadline) {
+                    while (current() && t.playbackHeadPosition < pcm.size && System.currentTimeMillis() < deadline) {
                         follow(t, fromTick, secondsPerTick)
                         Thread.sleep(20)
                     }
                 }
             } catch (e: Exception) {
                 // A track that would not open or play: said on the take's screen, not a crash.
-                if (on) _failed.value = true
+                if (current()) _failed.value = true
             } finally {
-                track?.let { runCatching { it.pause(); it.flush(); it.release() } }
-                track = null
-                _position.value = -1
-                _playing.value = false
+                // Only this play's own track, and the state only while this play is the current one.
+                own?.let { runCatching { it.pause(); it.flush(); it.release() } }
+                if (track === own) track = null
+                if (generation.get() == mine) {
+                    _position.value = -1
+                    _playing.value = false
+                }
             }
         }
     }

@@ -10,7 +10,10 @@ import com.wanderwildwood.hanauta.data.Take
 import com.wanderwildwood.hanauta.data.Takes
 import com.wanderwildwood.hanauta.music.Midi
 import com.wanderwildwood.hanauta.music.MusicXml
+import androidx.core.content.ContextCompat
 import java.io.File
+import java.io.OutputStream
+import kotlin.concurrent.thread
 
 /**
  * A take sent through the share sheet, or saved to a file the person picks with Android's own
@@ -26,27 +29,45 @@ object Send {
         Recording("wav", "audio/wav"),
     }
 
-    private fun bytes(context: Context, take: Take, what: What): ByteArray = when (what) {
-        What.Midi -> Midi.write(take.score())
-        What.Sheet -> MusicXml.write(take.score()).toByteArray()
-        What.Recording -> Takes.get(context).wav(take.id).readBytes()
+    /** The take as [what], written to [out]; the recording is streamed, not read whole. */
+    private fun write(context: Context, take: Take, what: What, out: OutputStream) = when (what) {
+        What.Midi -> out.write(Midi.write(take.score()))
+        What.Sheet -> out.write(MusicXml.write(take.score()).toByteArray())
+        What.Recording -> Takes.get(context).wav(take.id).inputStream().use { it.copyTo(out, 1 shl 16) }
     }
 
-    /** Writes the take to the file the picker made at [uri]. */
+    /**
+     * Writes the take to the file the picker made at [uri], off the main thread: the recording
+     * can be tens of megabytes and the place picked may be on the network.
+     */
     fun save(context: Context, take: Take, what: What, uri: Uri) {
-        val ok = runCatching {
-            context.contentResolver.openOutputStream(uri, "wt")!!.use { it.write(bytes(context, take, what)) }
-        }.isSuccess
-        // Said along the foot until the next press, not in a toast that goes by itself.
-        Notice.say(context.getString(if (ok) R.string.save_done else R.string.save_failed))
+        val app = context.applicationContext
+        thread(name = "hum-save") {
+            val ok = runCatching {
+                app.contentResolver.openOutputStream(uri, "wt")!!.use { write(app, take, what, it) }
+            }.isSuccess
+            // Said along the foot until the next press, not in a toast that goes by itself.
+            ContextCompat.getMainExecutor(app).execute {
+                Notice.say(app.getString(if (ok) R.string.save_done else R.string.save_failed))
+            }
+        }
+    }
+
+    /** Files handed out more than this long ago are cleared; a newer one may still be being read. */
+    private const val KEEP_SENT_MS = 60 * 60 * 1000L
+
+    /** Clears what was handed to other apps long enough ago that they have read it. */
+    fun clearOld(context: Context) {
+        val cutoff = System.currentTimeMillis() - KEEP_SENT_MS
+        File(context.cacheDir, "send").listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
     }
 
     fun send(context: Context, take: Take, what: What) {
         runCatching {
             val dir = File(context.cacheDir, "send").apply { mkdirs() }
-            dir.listFiles()?.forEach { it.delete() }
+            clearOld(context)
             val file = File(dir, fileName(take.name) + "." + what.extension)
-            file.writeBytes(bytes(context, take, what))
+            file.outputStream().use { write(context, take, what, it) }
             val uri = FileProvider.getUriForFile(context, context.packageName + ".files", file)
             val send = Intent(Intent.ACTION_SEND)
                 .setType(what.mime)
