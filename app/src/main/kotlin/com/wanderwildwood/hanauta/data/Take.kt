@@ -76,7 +76,16 @@ data class Take(
  * the recording as WAV, and the pitch the voice took through it, for the editor to draw.
  */
 class Takes private constructor(context: Context) {
-    val dir = File(context.filesDir, "takes").apply { mkdirs() }
+    val dir = File(context.filesDir, "takes").apply {
+        // A restore killed between setting the library aside and moving the new one in: the old
+        // library goes back where it was.
+        val before = File(context.filesDir, "takes-before-restore")
+        if (before.isDirectory && (!isDirectory || list().isNullOrEmpty())) {
+            delete()
+            before.renameTo(this)
+        }
+        mkdirs()
+    }
 
     private val _version = MutableStateFlow(0)
     /** Goes up on every change, for the screens to read again. */

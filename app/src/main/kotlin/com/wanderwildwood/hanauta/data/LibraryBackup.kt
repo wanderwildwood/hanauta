@@ -106,21 +106,31 @@ object LibraryBackup {
 
         val files = takes.listFiles().orEmpty()
         val ids = files.filter { it.name.endsWith(".json") }.map { f ->
-            val id = f.name.removeSuffix(".json").toLong()
+            val id = f.name.removeSuffix(".json").toLongOrNull() ?: throw Refused(Refused.Kind.DAMAGED)
             val take = try {
                 Take.fromJson(JSONObject(f.readText()))
             } catch (e: Exception) {
                 throw Refused(Refused.Kind.DAMAGED)
             }
-            if (take.id != id) throw Refused(Refused.Kind.DAMAGED)
+            if (take.id != id || !sensible(take)) throw Refused(Refused.Kind.DAMAGED)
             id
         }.toSet()
         for (f in files) {
-            val id = TAKE_FILE.matchEntire(f.name)!!.groupValues[1].toLong()
-            if (id !in ids) f.delete()
+            val id = TAKE_FILE.matchEntire(f.name)?.groupValues?.get(1)?.toLongOrNull()
+            if (id == null || id !in ids) f.delete()
         }
         return Unpacked(takes, ids.size, settings)
     }
+
+    /** A take the screens can draw and the files can be written from: nothing out of range. */
+    internal fun sensible(t: Take): Boolean =
+        t.beatsPerBar in 1..16 &&
+            t.tempo.isFinite() && t.tempo > 0f &&
+            t.key.tonic in 0..11 &&
+            t.seconds.isFinite() && t.seconds >= 0f &&
+            t.beatZero.isFinite() && t.tuning.isFinite() &&
+            t.notes.all { it.start >= 0 && it.length > 0 && it.pitch in 0..127 } &&
+            t.sung.all { it.start.isFinite() && it.end.isFinite() && it.pitch.isFinite() }
 
     private fun readSettings(o: JSONObject): Map<String, Any> {
         val out = linkedMapOf<String, Any>()

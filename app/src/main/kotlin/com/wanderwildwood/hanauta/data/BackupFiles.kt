@@ -36,6 +36,9 @@ object BackupFiles {
                 return Result.Refused(e.kind)
             } catch (e: java.io.IOException) {
                 return Result.Unreadable
+            } catch (e: Exception) {
+                // A revoked loan (SecurityException), a malformed entry name: unreadable, not a crash.
+                return Result.Unreadable
             }
             if (!takes.replaceAll(unpacked.takes)) return Result.Unreadable
             Prefs(context).restore(unpacked.settings)

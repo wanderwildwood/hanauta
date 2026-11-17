@@ -105,6 +105,10 @@ class LibraryBackupTest {
         // A take stored under another take's id.
         refusedAs(LibraryBackup.Refused.Kind.DAMAGED, zipOf(LibraryBackup.HEAD to head, "takes/7.json" to take(8, "Ada's whistle").toJson().toString()))
         refusedAs(LibraryBackup.Refused.Kind.DAMAGED, zipOf(LibraryBackup.HEAD to """{"format":"hanauta-backup","version":1,"settings":{"tempo":900}}"""))
+        // An id too long for a number, and a take whose bar has no beats.
+        refusedAs(LibraryBackup.Refused.Kind.DAMAGED, zipOf(LibraryBackup.HEAD to head, "takes/9999999999999999999.json" to take(7, "Ada's whistle").toJson().toString()))
+        refusedAs(LibraryBackup.Refused.Kind.DAMAGED, zipOf(LibraryBackup.HEAD to head, "takes/7.json" to take(7, "Ada's whistle").copy(beatsPerBar = 0).toJson().toString()))
+        refusedAs(LibraryBackup.Refused.Kind.DAMAGED, zipOf(LibraryBackup.HEAD to head, "takes/7.json" to take(7, "Ada's whistle").copy(tempo = 0f).toJson().toString()))
         val whole = backupOf(library())
         refusedAs(LibraryBackup.Refused.Kind.DAMAGED, whole.copyOf(whole.size * 2 / 5))
     }
