@@ -37,6 +37,8 @@ object Recording {
     fun start(context: Context, setup: Setup) {
         if (busy) return
         clickSilentFlow.value = false
+        // Here, not when the service starts: a Stop pressed before then is kept.
+        RecordService.stopListening = false
         stage.value = if (setup.click) Stage.CountIn(1, setup.beatsPerBar) else Stage.Listening(0, false)
         context.startForegroundService(
             Intent(context, RecordService::class.java)
@@ -75,7 +77,18 @@ object Recording {
             val copied = runCatching {
                 inbox.mkdirs()
                 app.contentResolver.openInputStream(uri)!!.use { input ->
-                    copy.outputStream().use { input.copyTo(it) }
+                    copy.outputStream().use { out ->
+                        // No sound file of the longest take comes near this; stop rather than fill the phone.
+                        val buf = ByteArray(1 shl 16)
+                        var total = 0L
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            total += n
+                            check(total <= MAX_SHARED_BYTES) { "too big" }
+                            out.write(buf, 0, n)
+                        }
+                    }
                 }
             }.isSuccess
             if (!copied || copy.length() == 0L) {
@@ -90,6 +103,9 @@ object Recording {
             }
         }
     }
+
+    /** Ten minutes of 96 kHz stereo 24-bit WAV is about 350 MB; anything past this is not a take. */
+    private const val MAX_SHARED_BYTES = 400L * 1024 * 1024
 
     /** Where a shared file waits to be read. */
     internal fun inbox(context: Context) = File(context.cacheDir, "shared")

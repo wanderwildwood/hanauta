@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.mudita.mmd.ThemeMMD
 import com.wanderwildwood.hanauta.audio.Recording
+import com.wanderwildwood.hanauta.ui.Send
 import com.wanderwildwood.hanauta.data.Prefs
 import com.wanderwildwood.hanauta.ui.ArmedScope
 import com.wanderwildwood.hanauta.ui.HumApp
@@ -34,6 +35,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (savedInstanceState == null) {
+            // Copies left by an earlier run: files sent long ago, and a shared file whose read
+            // never finished. Not while a read is under way, which may be using one.
+            if (!Recording.busy) {
+                Send.clearOld(this)
+                Recording.inbox(this).listFiles()?.forEach { it.delete() }
+            }
             debugImport()
             readShared(intent)
         }
@@ -75,6 +82,8 @@ class MainActivity : ComponentActivity() {
         val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
             ?: intent.clipData?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.uri
             ?: return
+        // Only a file another app lends: never a path into this app's own storage.
+        if (uri.scheme != android.content.ContentResolver.SCHEME_CONTENT) return
         Recording.importShared(this, uri, prefs.beatsPerBar)
     }
 

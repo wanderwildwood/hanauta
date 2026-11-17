@@ -46,7 +46,6 @@ class RecordService : Service() {
         val action = intent?.action
         if (running || intent == null || action == null) return START_NOT_STICKY
         running = true
-        stopListening = false
         thread(name = "hum-take") {
             try {
                 when (action) {
@@ -57,6 +56,10 @@ class RecordService : Service() {
                     )
                     IMPORT -> import(intent.data!!, intent.getStringExtra("name"), intent.getIntExtra("beats", 4))
                 }
+            } catch (e: Throwable) {
+                // Out of memory finding the notes of a long take, or anything else: said on the
+                // screen, not a crash that leaves the app stuck on "Finding".
+                Recording.stage.value = Stage.Failed(Reason.Unreadable)
             } finally {
                 running = false
                 stopForeground(STOP_FOREGROUND_REMOVE)
