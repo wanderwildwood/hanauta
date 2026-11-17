@@ -20,7 +20,10 @@ class Track(val midi: FloatArray, val level: FloatArray, val offset: Float = 0f)
     fun time(i: Int) = offset + i * HOP_SECONDS
 
     companion object {
-        const val HOP_SECONDS = 0.01f
+        /** Readings are this many samples apart at [Tracker.RATE]: 220 at 22050, a shade under 10 ms. */
+        const val HOP_SAMPLES = 220
+        /** The exact spacing in seconds, so times read off a long take do not drift from the sound. */
+        const val HOP_SECONDS = HOP_SAMPLES / 22050f
     }
 }
 
@@ -45,7 +48,7 @@ object Tracker {
      */
     fun analyse(samples: FloatArray, rate: Int, onProgress: (Float) -> Unit = {}): Track {
         val x = resample(samples, rate, RATE)
-        val hop = (RATE * Track.HOP_SECONDS).toInt()
+        val hop = Track.HOP_SAMPLES
         val n = if (x.size < WINDOW) 0 else (x.size - WINDOW) / hop + 1
         val midi = FloatArray(n) { Float.NaN }
         val level = FloatArray(n)
