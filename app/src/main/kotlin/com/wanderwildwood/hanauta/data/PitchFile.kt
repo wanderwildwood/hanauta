@@ -10,8 +10,10 @@ import java.io.OutputStream
  * A take's `.pitch` file: a marker, the seconds between readings, the time of the first
  * reading, the count, then each reading as a fractional MIDI note.
  *
- * Files kept before the marker came in start straight with the first reading's time and were
- * read every 0.01 s; a file without the marker is read that way. The marker read as a float is
+ * Files kept by builds before 0.1.28 start straight with the first reading's time and were
+ * read every 0.01 s; a file without the marker is read that way. The 0.1.28 build timed its
+ * readings at [com.wanderwildwood.hanauta.music.Track.HOP_SECONDS] without writing the marker,
+ * but it never reached a phone, so no kept file comes from it. The marker read as a float is
  * about 218,000 seconds, a first reading no recording ever had, so the two cannot be mixed up.
  * An app from before the marker would misread a new file, so a backup restores forward only.
  */
