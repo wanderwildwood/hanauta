@@ -10,7 +10,7 @@ class RecoverTest {
 
     @Test fun aRecordingWithNoTakeIsFound() {
         val dir = tmp.newFolder("takes")
-        for (name in listOf("100.wav", "100.json", "100.pitch", "200.wav", "300.wav", "300.json.tmp", "notes.wav", "400.json")) {
+        for (name in listOf("100.wav", "100.json", "100.pitch", "200.wav", "300.wav", "300.json.tmp", "300.begun", "500.begun", "notes.wav", "400.json")) {
             dir.resolve(name).writeText("x")
         }
         assertEquals(listOf(200L, 300L), Recover.orphans(dir))

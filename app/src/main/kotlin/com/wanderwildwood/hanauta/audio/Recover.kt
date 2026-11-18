@@ -71,6 +71,7 @@ object Recover {
             tmp.delete()
             if (kept != null && kept.id == id) {
                 takes.save(kept)
+                takes.forgetBegun(id)
                 return true
             }
         }
@@ -78,14 +79,17 @@ object Recover {
         val (samples, rate) = Wav.readDown(takes.wav(id), Tracker.RATE) ?: return false
         // Under a second is a press of Record and nothing more.
         if (rate <= 0 || samples.size < rate) return false
+        // Named, timed to the click and counted as it was begun, when that was kept.
+        val begun = takes.begunOf(id)
         val made = RecordService.takeOf(
             context, id, samples, rate,
-            name = null, tempo = null, beatZero = null,
-            beats = Prefs(context).beatsPerBar,
+            name = begun?.name, tempo = begun?.tempo, beatZero = begun?.beatZero,
+            beats = begun?.beats ?: Prefs(context).beatsPerBar,
             onProgress = {},
         ) ?: return false
         takes.savePitch(id, made.second)
         takes.save(made.first)
+        takes.forgetBegun(id)
         return true
     }
 }

@@ -94,6 +94,36 @@ class Takes private constructor(context: Context) {
     fun json(id: Long) = File(dir, "$id.json")
     fun wav(id: Long) = File(dir, "$id.wav")
     private fun pitch(id: Long) = File(dir, "$id.pitch")
+    private fun begun(id: Long) = File(dir, "$id.begun")
+
+    /**
+     * What a take being read for its notes was begun with, kept beside its recording until the
+     * take is saved: one cut off midway is read in at the next start as it was begun.
+     */
+    class Begun(val name: String?, val tempo: Float?, val beatZero: Float?, val beats: Int)
+
+    fun saveBegun(id: Long, b: Begun) {
+        val o = JSONObject().put("beats", b.beats)
+        b.name?.let { o.put("name", it) }
+        b.tempo?.let { o.put("tempo", it.toDouble()) }
+        b.beatZero?.let { o.put("beatZero", it.toDouble()) }
+        begun(id).writeText(o.toString())
+    }
+
+    /** Null when nothing was kept, or what was kept cannot be read. */
+    fun begunOf(id: Long): Begun? = runCatching {
+        val o = JSONObject(begun(id).readText())
+        Begun(
+            name = if (o.has("name")) o.getString("name") else null,
+            tempo = if (o.has("tempo")) o.getDouble("tempo").toFloat() else null,
+            beatZero = if (o.has("beatZero")) o.getDouble("beatZero").toFloat() else null,
+            beats = o.getInt("beats"),
+        )
+    }.getOrNull()
+
+    fun forgetBegun(id: Long) {
+        begun(id).delete()
+    }
 
     /** Newest first. */
     fun all(): List<Take> = (dir.listFiles { f -> f.name.endsWith(".json") } ?: emptyArray())
@@ -151,7 +181,7 @@ class Takes private constructor(context: Context) {
     }
 
     fun delete(id: Long) {
-        json(id).delete(); wav(id).delete(); pitch(id).delete()
+        json(id).delete(); wav(id).delete(); pitch(id).delete(); begun(id).delete()
         _version.value++
     }
 

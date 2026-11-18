@@ -193,6 +193,8 @@ class RecordService : Service() {
     private fun find(id: Long, file: File, name: String?, tempo: Float?, beatZero: Float?, beats: Int) {
         Recording.stage.value = Stage.Finding(0f)
         notify(getString(R.string.notify_finding))
+        // Kept until the take is saved, for a take cut off before then to be read in the same way.
+        runCatching { Takes.get(this).saveBegun(id, Takes.Begun(name, tempo, beatZero, beats)) }
         // A take cut off at an earlier run may be being read in: this waits for it.
         synchronized(Recording.finding) { findNow(id, file, name, tempo, beatZero, beats) }
     }
@@ -216,6 +218,7 @@ class RecordService : Service() {
         }
         takes.savePitch(id, made.second)
         takes.save(made.first)
+        takes.forgetBegun(id)
         Recording.stage.value = Stage.Done(id)
     }
 
