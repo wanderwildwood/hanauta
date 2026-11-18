@@ -6,6 +6,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.media.AudioAttributes
@@ -25,6 +26,7 @@ import com.wanderwildwood.hanauta.data.Prefs
 import com.wanderwildwood.hanauta.data.Take
 import com.wanderwildwood.hanauta.data.Takes
 import com.wanderwildwood.hanauta.ui.Words
+import com.wanderwildwood.hanauta.music.Track
 import com.wanderwildwood.hanauta.music.Transcribe
 import java.io.File
 import kotlin.concurrent.thread
@@ -182,26 +184,16 @@ class RecordService : Service() {
             Recording.stage.value = Stage.Failed(Reason.Unreadable)
             return
         }
-        val t = Transcribe.run(samples, rate, beats, Prefs(this).grid, tempo, beatZero) {
+        val made = takeOf(this, id, samples, rate, name, tempo, beatZero, beats) {
             Recording.stage.value = Stage.Finding(it)
         }
-        if (t.notes.isEmpty()) {
+        if (made == null) {
             takes.delete(id)
             Recording.stage.value = Stage.Failed(Reason.NoNotes)
             return
         }
-        val p = t.placing
-        val take = Take(
-            id = id,
-            name = name?.takeIf { it.isNotBlank() } ?: Words.recordedAt(id),
-            seconds = samples.size.toFloat() / rate,
-            tempo = p.tempo, beatsPerBar = p.beatsPerBar, key = p.key, grid = p.grid,
-            beatZero = p.beatZero, tuning = p.tuning,
-            clicked = tempo != null,
-            sung = t.sung, notes = t.notes,
-        )
-        takes.savePitch(id, t.track)
-        takes.save(take)
+        takes.savePitch(id, made.second)
+        takes.save(made.first)
         Recording.stage.value = Stage.Done(id)
     }
 
@@ -236,6 +228,36 @@ class RecordService : Service() {
 
         @Volatile var stopListening = false
         @Volatile private var running = false
+
+        /**
+         * The notes out of a recording's [samples], as a take and the voice's pitch through it;
+         * null when no notes were found.
+         */
+        internal fun takeOf(
+            context: Context,
+            id: Long,
+            samples: FloatArray,
+            rate: Int,
+            name: String?,
+            tempo: Float?,
+            beatZero: Float?,
+            beats: Int,
+            onProgress: (Float) -> Unit,
+        ): Pair<Take, Track>? {
+            val t = Transcribe.run(samples, rate, beats, Prefs(context).grid, tempo, beatZero, onProgress = onProgress)
+            if (t.notes.isEmpty()) return null
+            val p = t.placing
+            val take = Take(
+                id = id,
+                name = name?.takeIf { it.isNotBlank() } ?: Words.recordedAt(id),
+                seconds = samples.size.toFloat() / rate,
+                tempo = p.tempo, beatsPerBar = p.beatsPerBar, key = p.key, grid = p.grid,
+                beatZero = p.beatZero, tuning = p.tuning,
+                clicked = tempo != null,
+                sung = t.sung, notes = t.notes,
+            )
+            return take to t.track
+        }
     }
 }
 

@@ -14,6 +14,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import com.mudita.mmd.ThemeMMD
 import com.wanderwildwood.hanauta.audio.Recording
+import com.wanderwildwood.hanauta.audio.Recover
 import com.wanderwildwood.hanauta.ui.Send
 import com.wanderwildwood.hanauta.data.Prefs
 import com.wanderwildwood.hanauta.ui.ArmedScope
@@ -40,6 +41,8 @@ class MainActivity : ComponentActivity() {
             if (!Recording.busy) {
                 Send.clearOld(this)
                 Recording.inbox(this).listFiles()?.forEach { it.delete() }
+                // Takes cut off before their notes were found are read for them now.
+                Recover.start(this)
             }
             debugImport()
             readShared(intent)
