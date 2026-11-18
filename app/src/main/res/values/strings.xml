@@ -29,6 +29,10 @@
     <string name="home_click_off">No click: sing in your own time</string>
     <string name="home_import">Read a recording</string>
     <string name="home_import_note">A sound file already on the phone</string>
+    <string name="shared_read_title">Read %1$s?</string>
+    <string name="shared_read_title_unnamed">Read this sound file?</string>
+    <string name="shared_read_note">Hum copies it and listens for its notes, as Read a recording does.</string>
+    <string name="shared_read">Read</string>
     <string name="home_empty">No takes yet. Press Record, hum or sing the tune, and press Stop.</string>
     <!-- A take's second line: "0:23 · 14 notes · G major" -->
     <string name="take_line">%1$s · %2$s · %3$s</string>

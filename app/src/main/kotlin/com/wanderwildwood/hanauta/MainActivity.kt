@@ -21,6 +21,8 @@ import com.wanderwildwood.hanauta.ui.ArmedScope
 import com.wanderwildwood.hanauta.ui.HumApp
 import com.wanderwildwood.hanauta.ui.Notice
 import com.wanderwildwood.hanauta.ui.NoticeStrip
+import com.wanderwildwood.hanauta.ui.ReadSharedDialog
+import androidx.compose.runtime.mutableStateOf
 import com.wanderwildwood.hanauta.ui.onEachPress
 import com.wanderwildwood.hanauta.ui.houseTypography
 import com.wanderwildwood.hanauta.ui.monochrome
@@ -31,6 +33,12 @@ class MainActivity : ComponentActivity() {
     private val prefs by lazy { Prefs(this) }
     // Held here: the preferences keep only a weak hold on it.
     private var turnListener: android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+    /**
+     * A sound file shared from another app, waiting for "Read <name>?" to be answered. Nothing
+     * of it is read before Read is pressed but its name. Kept across a window built again.
+     */
+    private val askShared = mutableStateOf<SharedSound?>(null)
 
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,6 +54,10 @@ class MainActivity : ComponentActivity() {
             }
             debugImport()
             readShared(intent)
+        } else {
+            askShared.value = savedInstanceState.getString(STATE_SHARED_URI)?.let {
+                SharedSound(Uri.parse(it), savedInstanceState.getString(STATE_SHARED_NAME))
+            }
         }
         turner.set(prefs.turnWithPhone)
         // The switch in Settings takes effect at once.
@@ -62,6 +74,16 @@ class MainActivity : ComponentActivity() {
                         HumApp()
                         NoticeStrip(Modifier.align(Alignment.BottomCenter))
                     }
+                    askShared.value?.let { shared ->
+                        ReadSharedDialog(
+                            name = shared.name,
+                            onRead = {
+                                askShared.value = null
+                                Recording.importShared(this, shared.uri, prefs.beatsPerBar)
+                            },
+                            onDismiss = { askShared.value = null },
+                        )
+                    }
                 }
             } }
         }
@@ -74,9 +96,9 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * A sound file shared to Hum from another app: read in at once, as "Read a recording" would,
-     * and the take opens when its notes are found. Coming back to the app from Recents brings the
-     * same share again; it is not read twice.
+     * A sound file shared to Hum from another app: asked about first ("Read <name>?"), then read
+     * in as "Read a recording" would, and the take opens when its notes are found. Coming back to
+     * the app from Recents brings the same share again; it is not asked about or read twice.
      */
     private fun readShared(intent: Intent?) {
         if (intent?.action != Intent.ACTION_SEND) return
@@ -87,7 +109,15 @@ class MainActivity : ComponentActivity() {
             ?: return
         // Only a file another app lends: never a path into this app's own storage.
         if (uri.scheme != android.content.ContentResolver.SCHEME_CONTENT) return
-        Recording.importShared(this, uri, prefs.beatsPerBar)
+        askShared.value = SharedSound(uri, Recording.sharedName(this, uri))
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        askShared.value?.let {
+            outState.putString(STATE_SHARED_URI, it.uri.toString())
+            outState.putString(STATE_SHARED_NAME, it.name)
+        }
     }
 
     override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
@@ -122,3 +152,9 @@ class MainActivity : ComponentActivity() {
         if (file.isFile) Recording.import(this, Uri.fromFile(file), file.nameWithoutExtension, Prefs(this).beatsPerBar)
     }
 }
+
+/** A shared sound file's address, and its name without the ending when the sender gives one. */
+private data class SharedSound(val uri: Uri, val name: String?)
+
+private const val STATE_SHARED_URI = "shared_uri"
+private const val STATE_SHARED_NAME = "shared_name"

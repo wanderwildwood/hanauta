@@ -69,11 +69,7 @@ object Recording {
             val inbox = inbox(app)
             inbox.listFiles()?.forEach { it.delete() }
             val copy = File(inbox, "shared-${System.currentTimeMillis()}")
-            val name = runCatching {
-                app.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-                    if (c.moveToFirst()) c.getString(0)?.substringBeforeLast('.') else null
-                }
-            }.getOrNull()
+            val name = sharedName(app, uri)
             val copied = runCatching {
                 inbox.mkdirs()
                 app.contentResolver.openInputStream(uri)!!.use { input ->
@@ -103,6 +99,13 @@ object Recording {
             }
         }
     }
+
+    /** A shared file's name as its sender gives it, without the ending; null when it gives none. */
+    fun sharedName(context: Context, uri: Uri): String? = runCatching {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+            if (c.moveToFirst()) c.getString(0)?.substringBeforeLast('.') else null
+        }
+    }.getOrNull()?.takeIf { it.isNotBlank() }
 
     /** Ten minutes of 96 kHz stereo 24-bit WAV is about 350 MB; anything past this is not a take. */
     private const val MAX_SHARED_BYTES = 400L * 1024 * 1024
