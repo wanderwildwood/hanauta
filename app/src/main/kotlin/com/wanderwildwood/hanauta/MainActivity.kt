@@ -4,6 +4,8 @@ import com.wanderwildwood.hanauta.ui.DarkSelection
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -30,6 +32,7 @@ import com.wanderwildwood.hanauta.ui.onEachPress
 import com.wanderwildwood.hanauta.ui.houseTypography
 import com.wanderwildwood.hanauta.ui.monochrome
 import java.io.File
+import kotlin.concurrent.thread
 
 class MainActivity : ComponentActivity() {
     private val turner = TurnWithPhone(this)
@@ -42,6 +45,13 @@ class MainActivity : ComponentActivity() {
      * of it is read before Read is pressed but its name. Kept across a window built again.
      */
     private val askShared = mutableStateOf<SharedSound?>(null)
+
+    /**
+     * A share whose name is still being asked of its sender, until the name comes in or the
+     * question is answered; a newer share takes its place.
+     */
+    private var naming: SharedSound? = null
+    private val main = Handler(Looper.getMainLooper())
 
     @OptIn(ExperimentalComposeUiApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -89,10 +99,14 @@ class MainActivity : ComponentActivity() {
                                 // Kept asking while a take is under way, rather than closed with
                                 // nothing read.
                                 if (Recording.importShared(this, shared.uri, prefs.beatsPerBar)) {
+                                    naming = null
                                     askShared.value = null
                                 }
                             },
-                            onDismiss = { askShared.value = null },
+                            onDismiss = {
+                                naming = null
+                                askShared.value = null
+                            },
                         )
                     }
                 }
@@ -120,12 +134,28 @@ class MainActivity : ComponentActivity() {
             ?: return
         // Only a file another app lends: never a path into this app's own storage.
         if (uri.scheme != android.content.ContentResolver.SCHEME_CONTENT) return
-        askShared.value = SharedSound(uri, Recording.sharedName(this, uri))
+        // The name comes from the sender's own provider, which may be slow or never answer: it
+        // is asked off the main thread, and the question is put without it if the name has not
+        // come in by then. A name that comes in later is put in the question still open.
+        val ask = SharedSound(uri, null)
+        naming = ask
+        val unnamed = Runnable { if (naming === ask) askShared.value = ask }
+        main.postDelayed(unnamed, NAME_WAIT_MS)
+        val app = applicationContext
+        thread(name = "hum-shared-name", isDaemon = true) {
+            val name = Recording.sharedName(app, uri)
+            main.post {
+                if (naming !== ask) return@post
+                main.removeCallbacks(unnamed)
+                naming = null
+                askShared.value = SharedSound(uri, name)
+            }
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        askShared.value?.let {
+        (askShared.value ?: naming)?.let {
             outState.putString(STATE_SHARED_URI, it.uri.toString())
             outState.putString(STATE_SHARED_NAME, it.name)
         }
@@ -147,6 +177,8 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        naming = null
+        main.removeCallbacksAndMessages(null)
         turnListener?.let(prefs::stopWatching)
         super.onDestroy()
     }
@@ -168,4 +200,6 @@ class MainActivity : ComponentActivity() {
 private data class SharedSound(val uri: Uri, val name: String?)
 
 private const val STATE_SHARED_URI = "shared_uri"
+/** How long a sender has to give its file's name before the question is put without it. */
+private const val NAME_WAIT_MS = 400L
 private const val STATE_SHARED_NAME = "shared_name"
