@@ -22,7 +22,10 @@ import com.wanderwildwood.hanauta.ui.HumApp
 import com.wanderwildwood.hanauta.ui.Notice
 import com.wanderwildwood.hanauta.ui.NoticeStrip
 import com.wanderwildwood.hanauta.ui.ReadSharedDialog
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import com.wanderwildwood.hanauta.audio.Stage
 import com.wanderwildwood.hanauta.ui.onEachPress
 import com.wanderwildwood.hanauta.ui.houseTypography
 import com.wanderwildwood.hanauta.ui.monochrome
@@ -75,11 +78,19 @@ class MainActivity : ComponentActivity() {
                         NoticeStrip(Modifier.align(Alignment.BottomCenter))
                     }
                     askShared.value?.let { shared ->
+                        val stage by Recording.now.collectAsState()
+                        val restoring by Recording.restoringNow.collectAsState()
+                        val waiting = restoring ||
+                            stage.let { it is Stage.CountIn || it is Stage.Listening || it is Stage.Finding }
                         ReadSharedDialog(
                             name = shared.name,
+                            waiting = waiting,
                             onRead = {
-                                askShared.value = null
-                                Recording.importShared(this, shared.uri, prefs.beatsPerBar)
+                                // Kept asking while a take is under way, rather than closed with
+                                // nothing read.
+                                if (Recording.importShared(this, shared.uri, prefs.beatsPerBar)) {
+                                    askShared.value = null
+                                }
                             },
                             onDismiss = { askShared.value = null },
                         )

@@ -39,9 +39,10 @@ object Recording {
     /** Taken to change [stage] from idle to under way, or to begin a restore: never both at once. */
     private val gate = Any()
 
+    private val restoringFlow = MutableStateFlow(false)
     /** True while a restore is putting a backup's takes in place of these. */
-    @Volatile var restoring = false
-        private set
+    val restoringNow: StateFlow<Boolean> = restoringFlow
+    val restoring get() = restoringFlow.value
 
     /**
      * Held while the notes of one recording are being found (a take, a file read in, or one cut
@@ -57,13 +58,13 @@ object Recording {
         if (busy || restoring || Recover.running) {
             false
         } else {
-            restoring = true
+            restoringFlow.value = true
             true
         }
     }
 
     fun endRestore() {
-        restoring = false
+        restoringFlow.value = false
     }
 
     /** Moves [stage] on to [first] unless a take is under way or a restore is; true when it did. */

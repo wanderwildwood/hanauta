@@ -14,10 +14,11 @@ import com.wanderwildwood.hanauta.R
 
 /**
  * "Read <name>?" for a sound file another app shared. Any app can share one, so nothing of it
- * is read until Read is pressed here; Cancel leaves it unread.
+ * is read until Read is pressed here; Cancel leaves it unread. While [waiting] (a take is being
+ * made or read, or a backup restored) Read waits too, and the dialog says why.
  */
 @Composable
-fun ReadSharedDialog(name: String?, onRead: () -> Unit, onDismiss: () -> Unit) {
+fun ReadSharedDialog(name: String?, waiting: Boolean, onRead: () -> Unit, onDismiss: () -> Unit) {
     EInkDialog(onDismiss = onDismiss) {
         TextMMD(
             text = if (name != null) stringResource(R.string.shared_read_title, name) else stringResource(R.string.shared_read_title_unnamed),
@@ -25,7 +26,10 @@ fun ReadSharedDialog(name: String?, onRead: () -> Unit, onDismiss: () -> Unit) {
             fontWeight = FontWeight.Medium,
         )
         Spacer(Modifier.height(8.dp))
-        TextMMD(text = stringResource(R.string.shared_read_note), style = MaterialTheme.typography.bodyMedium)
+        TextMMD(
+            text = stringResource(if (waiting) R.string.shared_read_wait else R.string.shared_read_note),
+            style = MaterialTheme.typography.bodyMedium,
+        )
         Spacer(Modifier.height(16.dp))
         DialogButtons(
             cancel = stringResource(R.string.cancel),
@@ -34,6 +38,7 @@ fun ReadSharedDialog(name: String?, onRead: () -> Unit, onDismiss: () -> Unit) {
             onConfirm = onRead,
             modifier = Modifier.testTag("shared_read"),
             confirmOn = true,
+            confirmEnabled = !waiting,
         )
     }
 }
