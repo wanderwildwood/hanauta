@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
+import com.wanderwildwood.hanauta.R
+import com.wanderwildwood.hanauta.ui.Notice
 import java.io.File
 import kotlin.concurrent.thread
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,12 +36,55 @@ object Recording {
     internal val clickSilentFlow = MutableStateFlow(false)
     val clickSilent: StateFlow<Boolean> = clickSilentFlow
 
+    /** Taken to change [stage] from idle to under way, or to begin a restore: never both at once. */
+    private val gate = Any()
+
+    /** True while a restore is putting a backup's takes in place of these. */
+    @Volatile var restoring = false
+        private set
+
+    /**
+     * Held while the notes of one recording are being found (a take, a file read in, or one cut
+     * off at an earlier run): one at a time, so two long takes never share the memory.
+     */
+    internal val finding = Any()
+
+    /**
+     * A restore may begin: nothing is being recorded, read or recovered. Until [endRestore],
+     * no take is begun and no file is read in.
+     */
+    fun beginRestore(): Boolean = synchronized(gate) {
+        if (busy || restoring || Recover.running) {
+            false
+        } else {
+            restoring = true
+            true
+        }
+    }
+
+    fun endRestore() {
+        restoring = false
+    }
+
+    /** Moves [stage] on to [first] unless a take is under way or a restore is; true when it did. */
+    private fun begin(first: Stage): Boolean = synchronized(gate) {
+        if (busy || restoring) {
+            false
+        } else {
+            stage.value = first
+            true
+        }
+    }
+
     fun start(context: Context, setup: Setup) {
         if (busy) return
         clickSilentFlow.value = false
         // Here, not when the service starts: a Stop pressed before then is kept.
         RecordService.stopListening = false
-        stage.value = if (setup.click) Stage.CountIn(1, setup.beatsPerBar) else Stage.Listening(0, false)
+        if (!begin(if (setup.click) Stage.CountIn(1, setup.beatsPerBar) else Stage.Listening(0, false))) {
+            if (restoring) Notice.say(context.getString(R.string.restore_working))
+            return
+        }
         context.startForegroundService(
             Intent(context, RecordService::class.java)
                 .setAction(RecordService.RECORD)
@@ -51,19 +96,21 @@ object Recording {
 
     /** A sound file made somewhere else, read for its notes as a take sung in its own time. */
     fun import(context: Context, uri: Uri, name: String?, beatsPerBar: Int) {
-        if (busy) return
-        stage.value = Stage.Finding(0f)
+        if (!begin(Stage.Finding(0f))) {
+            if (restoring) Notice.say(context.getString(R.string.restore_working))
+            return
+        }
         startImport(context, uri, name, beatsPerBar)
     }
 
     /**
      * A sound file another app shared with Hum, read the same way. The loan to read it may end
      * with the share, so it is copied into the app's own storage first and read from there;
-     * the copy is removed once it has been read.
+     * the copy is removed once it has been read. False, and nothing done, while a take is under
+     * way or a restore is.
      */
-    fun importShared(context: Context, uri: Uri, beatsPerBar: Int) {
-        if (busy) return
-        stage.value = Stage.Finding(0f)
+    fun importShared(context: Context, uri: Uri, beatsPerBar: Int): Boolean {
+        if (!begin(Stage.Finding(0f))) return false
         val app = context.applicationContext
         thread(name = "hum-shared") {
             val inbox = inbox(app)
@@ -98,6 +145,7 @@ object Recording {
                 stage.value = Stage.Failed(Reason.Unreadable)
             }
         }
+        return true
     }
 
     /** A shared file's name as its sender gives it, without the ending; null when it gives none. */

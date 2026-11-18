@@ -57,7 +57,10 @@ class RecordService : Service() {
                         intent.getIntExtra("beats", 4),
                         intent.getBooleanExtra("click", true),
                     )
-                    IMPORT -> import(intent.data!!, intent.getStringExtra("name"), intent.getIntExtra("beats", 4))
+                    // Decoding a file holds all of it, so it waits its turn with any other finding.
+                    IMPORT -> synchronized(Recording.finding) {
+                        import(intent.data!!, intent.getStringExtra("name"), intent.getIntExtra("beats", 4))
+                    }
                 }
             } catch (e: Throwable) {
                 // Out of memory finding the notes of a long take, or anything else: said on the
@@ -190,6 +193,11 @@ class RecordService : Service() {
     private fun find(id: Long, file: File, name: String?, tempo: Float?, beatZero: Float?, beats: Int) {
         Recording.stage.value = Stage.Finding(0f)
         notify(getString(R.string.notify_finding))
+        // A take cut off at an earlier run may be being read in: this waits for it.
+        synchronized(Recording.finding) { findNow(id, file, name, tempo, beatZero, beats) }
+    }
+
+    private fun findNow(id: Long, file: File, name: String?, tempo: Float?, beatZero: Float?, beats: Int) {
         val takes = Takes.get(this)
         // Brought down to the rate the notes are found at as it is read, so a long take is
         // never held at full rate as well.

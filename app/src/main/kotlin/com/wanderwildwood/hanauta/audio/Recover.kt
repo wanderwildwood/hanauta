@@ -21,6 +21,10 @@ object Recover {
 
     @Volatile private var started = false
 
+    /** True while cut-off takes are being read in: no restore begins meanwhile. */
+    @Volatile var running = false
+        private set
+
     /** Ids of the recordings in [dir] that have no take beside them, oldest first. */
     fun orphans(dir: File): List<Long> =
         (dir.list() ?: emptyArray()).asSequence()
@@ -35,16 +39,26 @@ object Recover {
      * once, so a take begun after this call is never mistaken for a cut-off one.
      */
     fun start(context: Context) {
-        if (started || Recording.busy) return
+        if (started || Recording.busy || Recording.restoring) return
         started = true
         val app = context.applicationContext
         val takes = Takes.get(app)
         val ids = orphans(takes.dir)
         if (ids.isEmpty()) return
+        running = true
         thread(name = "hum-recover", priority = Thread.MIN_PRIORITY) {
-            for (id in ids) {
-                val ok = try { readIn(app, takes, id) } catch (_: Throwable) { continue }
-                if (!ok) takes.delete(id)
+            try {
+                for (id in ids) {
+                    // One at a time with a take being made now, never alongside it.
+                    val ok = try {
+                        synchronized(Recording.finding) { readIn(app, takes, id) }
+                    } catch (_: Throwable) {
+                        continue
+                    }
+                    if (!ok) takes.delete(id)
+                }
+            } finally {
+                running = false
             }
         }
     }

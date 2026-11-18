@@ -159,6 +159,7 @@
     <string name="backup_saved">Backup saved.</string>
     <string name="backup_not_saved">The backup could not be written.</string>
     <string name="restore_working">Restoring the backup…</string>
+    <string name="restore_busy">A take is being made or read. Restore once it is done.</string>
     <plurals name="restore_done">
         <item quantity="one">Restored. %1$d take.</item>
         <item quantity="other">Restored. %1$d takes.</item>

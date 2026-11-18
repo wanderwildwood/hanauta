@@ -3,6 +3,10 @@ package com.wanderwildwood.hanauta.ui
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.rememberCoroutineScope
+import android.os.Handler
+import android.os.Looper
+import com.wanderwildwood.hanauta.audio.Recording
+import kotlin.concurrent.thread
 import com.wanderwildwood.hanauta.data.BackupFiles
 import com.wanderwildwood.hanauta.data.LibraryBackup
 import kotlinx.coroutines.Dispatchers
@@ -55,22 +59,19 @@ fun SettingsScreen(onBack: () -> Unit) {
     }
     val restoreBackup = rememberLauncherForActivityResult(FilesOpenDocument(writable = false)) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
+        // Not while a take is being made or read, which would be writing into the library swapped out.
+        if (!Recording.beginRestore()) {
+            Notice.say(context.getString(R.string.restore_busy))
+            return@rememberLauncherForActivityResult
+        }
         Notice.say(context.getString(R.string.restore_working))
-        scope.launch {
-            val r = withContext(Dispatchers.IO) { BackupFiles.restore(context, uri) }
-            val message = when (r) {
-                is BackupFiles.Result.Done -> context.resources.getQuantityString(R.plurals.restore_done, r.takes, r.takes)
-                is BackupFiles.Result.Refused -> context.getString(
-                    when (r.kind) {
-                        LibraryBackup.Refused.Kind.NOT_A_BACKUP -> R.string.restore_not_ours
-                        LibraryBackup.Refused.Kind.NEWER -> R.string.restore_newer
-                        LibraryBackup.Refused.Kind.DAMAGED -> R.string.restore_damaged
-                    },
-                )
-                BackupFiles.Result.Unreadable -> context.getString(R.string.restore_unreadable)
-            }
-            Notice.say(message)
-            v++
+        // Its own thread, not this page's: leaving Settings midway neither loses what it came to
+        // nor leaves takes held back for good.
+        val app = context.applicationContext
+        thread(name = "hum-restore") {
+            val r = try { BackupFiles.restore(app, uri) } finally { Recording.endRestore() }
+            Notice.say(restoreMessage(app, r))
+            Handler(Looper.getMainLooper()).post { v++ }
         }
     }
 
@@ -133,4 +134,17 @@ fun SettingsScreen(onBack: () -> Unit) {
         )
     }
     if (about) AboutDialog(onDismiss = { about = false })
+}
+
+/** What a restore came to, as said along the foot. */
+private fun restoreMessage(context: android.content.Context, r: BackupFiles.Result): String = when (r) {
+    is BackupFiles.Result.Done -> context.resources.getQuantityString(R.plurals.restore_done, r.takes, r.takes)
+    is BackupFiles.Result.Refused -> context.getString(
+        when (r.kind) {
+            LibraryBackup.Refused.Kind.NOT_A_BACKUP -> R.string.restore_not_ours
+            LibraryBackup.Refused.Kind.NEWER -> R.string.restore_newer
+            LibraryBackup.Refused.Kind.DAMAGED -> R.string.restore_damaged
+        },
+    )
+    BackupFiles.Result.Unreadable -> context.getString(R.string.restore_unreadable)
 }
