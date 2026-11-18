@@ -47,7 +47,13 @@ class Bin(private val dir: File, private val bin: File) {
         waiting = null
     }
 
-    private companion object {
-        val EXTS = listOf("json", "wav", "pitch")
+    internal companion object {
+        /**
+         * The take's own file goes last, both ways. A delete cut off midway then leaves the take
+         * listed without its recording, to be deleted again, never a bare recording that Recover
+         * would read in at the next start as a new take; an Undo cut off midway leaves the
+         * recording to be read in again rather than a take with none.
+         */
+        val EXTS = listOf("wav", "pitch", "json")
     }
 }

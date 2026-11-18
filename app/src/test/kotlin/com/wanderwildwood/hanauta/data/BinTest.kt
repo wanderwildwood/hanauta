@@ -69,4 +69,9 @@ class BinTest {
         assertEquals(3L, bin.restore())
         assertTrue(File(dir, "3.json").exists())
     }
+
+    @Test fun `the take's own file moves last, so a delete cut off midway never leaves a bare recording`() {
+        assertEquals("json", Bin.EXTS.last())
+        assertEquals(setOf("json", "wav", "pitch"), Bin.EXTS.toSet())
+    }
 }
