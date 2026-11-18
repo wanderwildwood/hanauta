@@ -4,6 +4,7 @@ import android.content.Context
 import com.wanderwildwood.hanauta.data.Prefs
 import com.wanderwildwood.hanauta.data.Take
 import com.wanderwildwood.hanauta.data.Takes
+import com.wanderwildwood.hanauta.music.Tracker
 import org.json.JSONObject
 import java.io.File
 import kotlin.concurrent.thread
@@ -12,7 +13,9 @@ import kotlin.concurrent.thread
  * Takes cut off before their notes were found: the app stopped, or the phone switched off,
  * while a recording was being made or read. The recording is on disk with no take beside it, so
  * it was never listed. At the next start each one is read for its notes and becomes a take; one
- * that cannot be read, or holds no notes, is deleted.
+ * that is not a recording, is under a second or holds no notes, is deleted. One whose reading
+ * failed (out of memory, or the disk would not give it up) is kept, to be read at a later start:
+ * it may be the only copy of what was sung.
  */
 object Recover {
 
@@ -40,9 +43,7 @@ object Recover {
         if (ids.isEmpty()) return
         thread(name = "hum-recover", priority = Thread.MIN_PRIORITY) {
             for (id in ids) {
-                // Out of memory on a long take, or anything else: it goes, rather than being
-                // tried again at every start.
-                val ok = try { readIn(app, takes, id) } catch (_: Throwable) { false }
+                val ok = try { readIn(app, takes, id) } catch (_: Throwable) { continue }
                 if (!ok) takes.delete(id)
             }
         }
@@ -59,7 +60,8 @@ object Recover {
                 return true
             }
         }
-        val (samples, rate) = Wav.read(takes.wav(id)) ?: return false
+        // Read already brought down to the rate the notes are found at: a long take fits.
+        val (samples, rate) = Wav.readDown(takes.wav(id), Tracker.RATE) ?: return false
         // Under a second is a press of Record and nothing more.
         if (rate <= 0 || samples.size < rate) return false
         val made = RecordService.takeOf(

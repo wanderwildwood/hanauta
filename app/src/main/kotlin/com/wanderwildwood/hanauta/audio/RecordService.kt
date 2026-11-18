@@ -27,6 +27,7 @@ import com.wanderwildwood.hanauta.data.Take
 import com.wanderwildwood.hanauta.data.Takes
 import com.wanderwildwood.hanauta.ui.Words
 import com.wanderwildwood.hanauta.music.Track
+import com.wanderwildwood.hanauta.music.Tracker
 import com.wanderwildwood.hanauta.music.Transcribe
 import java.io.File
 import kotlin.concurrent.thread
@@ -160,18 +161,29 @@ class RecordService : Service() {
         // A shared file's copy is read as the shared file itself would be: through the decoder,
         // which stops at the longest take, not whole into memory.
         val shared = uri.scheme == "file" && File(uri.path!!).parentFile == Recording.inbox(this)
+        val copied = copyIn(uri, shared, file)
+        // A shared file's copy has done its work once read.
+        if (shared) File(uri.path!!).delete()
+        if (!copied) {
+            Recording.stage.value = Stage.Failed(Reason.Unreadable)
+            return
+        }
+        find(id, file, name ?: displayName(uri), tempo = null, beatZero = null, beats = beats)
+    }
+
+    /**
+     * The sound file decoded and written to [file] as a recording; false when it could not be
+     * read or holds nothing. Its own function, so the decoded samples are let go of before the
+     * notes are looked for.
+     */
+    private fun copyIn(uri: Uri, shared: Boolean, file: File): Boolean {
         val read = runCatching {
             if (uri.scheme == "file" && !shared) Wav.read(File(uri.path!!)) ?: Decode.read(this, uri)
             else Decode.read(this, uri)
         }.getOrNull()
-        // A shared file's copy has done its work once read.
-        if (shared) File(uri.path!!).delete()
-        if (read == null || read.first.isEmpty()) {
-            Recording.stage.value = Stage.Failed(Reason.Unreadable)
-            return
-        }
+        if (read == null || read.first.isEmpty()) return false
         Wav.write(file, read.first, read.second)
-        find(id, file, name ?: displayName(uri), tempo = null, beatZero = null, beats = beats)
+        return true
     }
 
     /** The notes out of a recording that is now on disk, saved as a take. */
@@ -179,7 +191,9 @@ class RecordService : Service() {
         Recording.stage.value = Stage.Finding(0f)
         notify(getString(R.string.notify_finding))
         val takes = Takes.get(this)
-        val (samples, rate) = Wav.read(file) ?: run {
+        // Brought down to the rate the notes are found at as it is read, so a long take is
+        // never held at full rate as well.
+        val (samples, rate) = Wav.readDown(file, Tracker.RATE) ?: run {
             takes.delete(id)
             Recording.stage.value = Stage.Failed(Reason.Unreadable)
             return
