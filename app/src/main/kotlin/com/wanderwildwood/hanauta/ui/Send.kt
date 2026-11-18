@@ -62,22 +62,40 @@ object Send {
         File(context.cacheDir, "send").listFiles()?.forEach { if (it.lastModified() < cutoff) it.delete() }
     }
 
+    /**
+     * Hands the take to another app through the share sheet. The file is written off the main
+     * thread, since the recording can be tens of megabytes; the share sheet opens once it is.
+     */
     fun send(context: Context, take: Take, what: What) {
-        runCatching {
-            val dir = File(context.cacheDir, "send").apply { mkdirs() }
-            clearOld(context)
-            val file = File(dir, fileName(take.name) + "." + what.extension)
-            file.outputStream().use { write(context, take, what, it) }
-            val uri = FileProvider.getUriForFile(context, context.packageName + ".files", file)
-            val send = Intent(Intent.ACTION_SEND)
-                .setType(what.mime)
-                .putExtra(Intent.EXTRA_STREAM, uri)
-                .putExtra(Intent.EXTRA_TITLE, file.name)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            send.clipData = ClipData.newRawUri(file.name, uri)
-            context.startActivity(Intent.createChooser(send, file.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }.onFailure {
-            Notice.say(context.getString(R.string.send_failed))
+        val app = context.applicationContext
+        thread(name = "hum-send") {
+            val file = runCatching {
+                val dir = File(app.cacheDir, "send").apply { mkdirs() }
+                clearOld(app)
+                val file = File(dir, fileName(take.name) + "." + what.extension)
+                try {
+                    file.outputStream().use { write(app, take, what, it) }
+                } catch (e: Throwable) {
+                    file.delete()
+                    throw e
+                }
+                file
+            }.getOrNull()
+            ContextCompat.getMainExecutor(app).execute {
+                runCatching {
+                    val f = file ?: error("not written")
+                    val uri = FileProvider.getUriForFile(app, app.packageName + ".files", f)
+                    val send = Intent(Intent.ACTION_SEND)
+                        .setType(what.mime)
+                        .putExtra(Intent.EXTRA_STREAM, uri)
+                        .putExtra(Intent.EXTRA_TITLE, f.name)
+                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    send.clipData = ClipData.newRawUri(f.name, uri)
+                    context.startActivity(Intent.createChooser(send, f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.onFailure {
+                    Notice.say(app.getString(R.string.send_failed))
+                }
+            }
         }
     }
 
