@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.DataInputStream
-import java.io.DataOutputStream
 import java.io.File
 
 /**
@@ -186,21 +184,12 @@ class Takes private constructor(context: Context) {
     }
 
     fun savePitch(id: Long, track: Track) {
-        DataOutputStream(pitch(id).outputStream().buffered()).use { out ->
-            out.writeFloat(track.offset)
-            out.writeInt(track.size)
-            for (m in track.midi) out.writeFloat(m)
-        }
+        pitch(id).outputStream().buffered().use { PitchFile.write(it, track) }
     }
 
-    /** The voice's pitch, a reading every hundredth of a second; empty if it was never kept. */
+    /** The voice's pitch as it was kept; null if it was never kept or cannot be read. */
     fun pitchOf(id: Long): Track? = runCatching {
-        DataInputStream(pitch(id).inputStream().buffered()).use { ins ->
-            val offset = ins.readFloat()
-            val n = ins.readInt()
-            val midi = FloatArray(n) { ins.readFloat() }
-            Track(midi, FloatArray(0), offset)
-        }
+        pitch(id).inputStream().buffered().use { PitchFile.read(it) }
     }.getOrNull()
 
     companion object {

@@ -8,16 +8,17 @@ import kotlin.math.log2
 import kotlin.math.sqrt
 
 /**
- * The voice's pitch through a recording, one reading every [HOP_SECONDS].
+ * The voice's pitch through a recording, one reading every [hop] seconds ([HOP_SECONDS] for
+ * every track read now; a pitch file kept before that spacing came in was read every 0.01 s).
  *
  * [midi] is the pitch as a fractional MIDI note (69 is A 440), or NaN where nothing was sung
  * clearly enough to have one. [level] is the loudness of the same stretch (RMS, 0 to 1).
  */
-class Track(val midi: FloatArray, val level: FloatArray, val offset: Float = 0f) {
+class Track(val midi: FloatArray, val level: FloatArray, val offset: Float = 0f, val hop: Float = HOP_SECONDS) {
     val size get() = midi.size
 
     /** The middle of the stretch reading [i] was taken from, in seconds. */
-    fun time(i: Int) = offset + i * HOP_SECONDS
+    fun time(i: Int) = offset + i * hop
 
     companion object {
         /** Readings are this many samples apart at [Tracker.RATE]: 220 at 22050, a shade under 10 ms. */
