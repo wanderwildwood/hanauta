@@ -36,6 +36,18 @@ class WavTest {
         assertArrayEquals(Tracker.resample(full, rate, Tracker.RATE), down, 0f)
     }
 
+    @Test fun aStretchReadsAsThatStretchOfTheWhole() {
+        val f = tmp.newFile("s.wav")
+        Wav.write(f, tone(50_000), 44100)
+        val (whole, _) = Wav.read(f)!!
+        Wav.Reader(f).use { r ->
+            assertEquals(50_000L, r.layout!!.frames)
+            val out = FloatArray(20_000)
+            r.read(12_345, 20_000, out)
+            assertArrayEquals(whole.copyOfRange(12_345, 32_345), out, 0f)
+        }
+    }
+
     @Test fun readDownLeavesAnOddRateAsItIs() {
         val f = tmp.newFile("c.wav")
         Wav.write(f, tone(4800), 48000)
