@@ -100,7 +100,14 @@ class RecordService : Service() {
         var beatZero = countIn
         var aligned = !click
 
+        // Kept beside the recording from its first moment, for a take cut off while it is still
+        // being made to be read in at the next start as it was begun.
+        fun keepBegun() = runCatching {
+            takes.saveBegun(id, Takes.Begun(null, if (click) tempo.toFloat() else null, if (click) beatZero else null, beats))
+        }
+
         Wav.Writer(file, RATE).use { wav ->
+            keepBegun()
             rec.startRecording()
             if (clicker != null && runCatching { clicker.start() }.isFailure) Recording.clickSilentFlow.value = true
             val block = ShortArray(RATE / 20)
@@ -127,6 +134,7 @@ class RecordService : Service() {
                         if (BuildConfig.DEBUG) Log.d("hanauta", "click alignment: gap ${gap}s")
                         if (gap > -0.5f && gap < 0.5f) beatZero = countIn + gap
                         aligned = true
+                        keepBegun()
                     }
                 }
 
@@ -164,14 +172,19 @@ class RecordService : Service() {
         // A shared file's copy is read as the shared file itself would be: through the decoder,
         // which stops at the longest take, not whole into memory.
         val shared = uri.scheme == "file" && File(uri.path!!).parentFile == Recording.inbox(this)
+        // Asked before the file is read, and kept beside the recording from the start, for an
+        // import cut off while it is being read to come back with its name.
+        val shown = name ?: displayName(uri)
+        runCatching { takes.saveBegun(id, Takes.Begun(shown, null, null, beats)) }
         val copied = copyIn(uri, shared, file)
         // A shared file's copy has done its work once read.
         if (shared) File(uri.path!!).delete()
         if (!copied) {
+            takes.forgetBegun(id)
             Recording.stage.value = Stage.Failed(Reason.Unreadable)
             return
         }
-        find(id, file, name ?: displayName(uri), tempo = null, beatZero = null, beats = beats)
+        find(id, file, shown, tempo = null, beatZero = null, beats = beats)
     }
 
     /**

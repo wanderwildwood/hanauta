@@ -35,6 +35,17 @@ object Recover {
             .toList()
 
     /**
+     * What a take was begun with, left in [dir] with no recording beside it: an import cut off
+     * before its file was read. Nothing will ever read these.
+     */
+    fun strays(dir: File): List<File> =
+        (dir.list() ?: emptyArray()).asSequence()
+            .filter { it.endsWith(".begun") }
+            .filter { !File(dir, it.removeSuffix(".begun") + ".wav").exists() }
+            .map { File(dir, it) }
+            .toList()
+
+    /**
      * Once per process, and only while nothing is being recorded or read: the list is made at
      * once, so a take begun after this call is never mistaken for a cut-off one.
      */
@@ -43,6 +54,7 @@ object Recover {
         started = true
         val app = context.applicationContext
         val takes = Takes.get(app)
+        strays(takes.dir).forEach { it.delete() }
         val ids = orphans(takes.dir)
         if (ids.isEmpty()) return
         running = true

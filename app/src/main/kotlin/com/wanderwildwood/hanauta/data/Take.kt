@@ -97,7 +97,7 @@ class Takes private constructor(context: Context) {
     private fun begun(id: Long) = File(dir, "$id.begun")
 
     /**
-     * What a take being read for its notes was begun with, kept beside its recording until the
+     * What a take being made or read was begun with, kept beside its recording until the
      * take is saved: one cut off midway is read in at the next start as it was begun.
      */
     class Begun(val name: String?, val tempo: Float?, val beatZero: Float?, val beats: Int)
