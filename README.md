@@ -9,8 +9,8 @@ device.
 
 | | |
 |---|---|
-| ![Takes, newest first](screenshots/1-takes.png) | ![About: Privacy and Terms](screenshots/2-about.png) |
-| ![A take on the piano roll, one note chosen](screenshots/3-piano-roll.png) | ![Send: MIDI, sheet music or the recording](screenshots/4-send.png) |
+| ![A take on the piano roll](screenshots/1-piano-roll.png) | ![Record, or read a recording already on the phone](screenshots/2-record.png) |
+| ![Send: MIDI, sheet music or the recording](screenshots/3-send.png) | ![Settings, with the backup](screenshots/4-settings.png) |
 
 Written in Kotlin and Jetpack Compose, using Mudita's own [MMD](https://github.com/mudita/MMD)
 design system so it looks like the apps the phone already ships with. The pitch detection is
